@@ -163,6 +163,10 @@ class Entity extends Dataset
 
     private function prepareColumnValue($value, $targetAttribute = NULL)
     {
+        if (is_a($value, 'Phidias\ORM\Entity')) {
+            $value = $value->toArray();
+        }
+
         if (is_array($value) && isset(static::$_schema['relations'][$targetAttribute]['entity'])) {
             $relatedEntityClass = static::$_schema['relations'][$targetAttribute]['entity'];
             $relatedSchema      = $relatedEntityClass::$_schema;
