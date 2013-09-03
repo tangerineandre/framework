@@ -60,28 +60,6 @@ class Environment
         set_include_path($path);
         Debug::add('include path: '.$path);
 
-        /* Consolidate public folder */
-        self::$_publicDirectoryHashes = array();
-        $publicDirectory = self::$_stack[0].DIRECTORY_SEPARATOR.'public';
-
-        $maxIndex = count(self::$_stack)-1;
-        for ($cont = 1; $cont <= $maxIndex; $cont++) {
-            $nodePublicDirectory = self::$_stack[$cont].DIRECTORY_SEPARATOR.'public';
-
-            if ( !is_dir($nodePublicDirectory) ) {
-                continue;
-            }
-
-            self::$_publicDirectoryHashes[self::$_stack[$cont]] = '_'.substr(md5(self::$_stack[$cont]),0,7);
-
-            $nodeAliasDirectory = $publicDirectory.DIRECTORY_SEPARATOR.self::$_publicDirectoryHashes[self::$_stack[$cont]];
-
-            if (!is_dir($nodeAliasDirectory)) {
-                Filesystem::createAlias($nodePublicDirectory, $nodeAliasDirectory);
-            }
-        }
-
-
         /* Include configuration */
         Debug::startBlock('including configuration files');
         $configurations = self::listDirectory(self::DIR_CONFIGURATION, TRUE, FALSE);
