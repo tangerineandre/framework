@@ -1,0 +1,26 @@
+<?php
+use Phidias\Core\Language;
+
+?>
+<form method="<?=$form->method?>" action="<?=$form->action?>">
+
+    <?php foreach ($form->fields as $field): ?>
+
+        <?php if (is_array($field)): ?>
+            <fieldset>
+                <legend><?=Language::get($field['legend'])?></legend>
+                <?php foreach($field['fields'] as $subField): ?>
+                    <?=$subField->toHTML()?>
+                <?php endforeach; ?>
+            </fieldset>
+        <?php else: ?>
+            <?=$field->toHTML()?>
+        <?php endif; ?>
+
+    <?php endforeach; ?>
+
+    <div class="footer">
+        <input type="submit" value="Submit" />
+    </div>
+
+</form>

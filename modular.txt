@@ -1,0 +1,55 @@
+myApplication/
+    application/
+        configuration/
+        controllers/
+        languages/
+        layouts/
+        models/
+        views/
+
+    public/
+        css/
+        js/
+        img/
+
+Environment:
+[0] => myApplication
+[1] => framework
+
+
+
+campestre_dev/environment.php:
+[0] => campestre
+[1] => core.dev
+
+campestre/environment.php:
+[0] => core
+
+core.dev/environment.php:
+[0] => core
+
+
+Deduced environment:
+[0] => campestre
+[1] => core  (from campestre/enfironment)
+[2] => core.dev
+
+
+Si quiero core.dev por encima de core, pero debajo de campestre, entonces debo declarar:
+campestre_dev/environment.php:
+[0] => campestre
+[1] => core.dev
+[2] => core
+
+
+campestre
+ -core
+
+dev
+ -core
+
+quiero
+
+campestre
+ -dev
+  -core

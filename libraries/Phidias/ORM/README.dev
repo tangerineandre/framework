@@ -1,0 +1,691 @@
+Result set:
+
+people0_id 	people0_firstName 	people0_lastName 	people0_birthDay 	people0_age 	people0_foo 	people_data0_email 	people_data0_mobile 	people_data0_concatenado 	people_data0_id
+1               laura the 1             of 1                    -537498000              60.5770 	hello world 	test@foo.com            456                     1-test@foo.com-456-123          1
+2               john the 2              of 2                    142210800               39.0236 	hello world 	test@foo.com            456                     2-test@foo.com-456-123          2
+3               john the 3              of 3                    690159600               21.6482 	hello world 	test@foo.com            456                     3-test@foo.com-456-123          3
+4               john the 4              of 4                    495583200               27.8182 	hello world 	test@foo.com            456                     4-test@foo.com-456-123          4
+5               laura the 5             of 5                    1288044000              2.6894          hello world 	test@foo.com            456                     5-test@foo.com-456-123          5
+
+
+Map:
+
+class:          Person
+keyColumn:      people0_id
+keyAttribute:   id
+attributes:
+        //these are basically the same attributes, but with a prefix
+        firstName   => people0_firstName
+        lastName    => people0_lastName
+        birthday    => people0_birthDay
+        age         => people0_age
+        foo         => people0_foo
+
+
+nested:
+    data:
+        class:          Person_Data
+        keyColumn:      people_data0_id
+        keyAttribute:   id
+        attributes:
+                email       => people_data0_email
+                mobile      => people_data0_mobile
+                concatenado => people_data0_concatenado
+
+
+
+ITERATOR:
+    map:
+    resultSet:
+    fromPointer:
+
+    filter: [column,value]
+        map->parentColumn
+        filterValue:
+
+    keyColumn: (map->keyColumn)
+    lastSeenKey:
+
+
+
+__construct($map, $resultSet = NULL, $pointerStart = 0, $filter = NULL):
+    $this->_map             = $map;
+    $this->_resultSet       = $resultSet;
+    $this->_pointerStart    = $pointerStart;
+    $this->_filter          = $filter;  (0: parent column,  1: expected value)
+
+    $this->_pointer         = NULL;
+    $this->_lastSeenKey     = NULL;
+
+rewind():
+    //initialize result set
+    if ( $this->_resultSet === NULL ) {
+        $this->_resultSet = $this->_map->getResultSet();
+    }
+
+    $this->_resultSet->data_seek($this->_pointerStart);
+    $this->pointer = $this->_pointerStart;
+    $this->_currentRow = $this->_resultSet->fetch_assoc();
+
+    $this->_lastSeenKey = $this->_currentRow[$this->_map->keyColumn];
+
+
+valid():
+    //there is a row
+    if ( $this->_currentRow === NULL ) {
+        return FALSE;
+    }
+
+    //and it passes the filter
+    if ( $this->_filter === NULL ) {
+        return TRUE;
+    }
+    if ( $this->_currentRow[$this->_filter[0]] == $this->_filter[1] ) {
+        return TRUE;
+    }
+
+    return FALSE;
+
+
+current():
+
+    $returnClassName    = $this->_map->getClassName();
+    $returnObject       = new $returnClassName;
+    foreach ( $map->attributes as $attributeName => $sourceColumn ) {
+        $returnObject->$attributeName = $this->_currentRow[$sourceColumn];
+    }
+
+    /* Force fetch ID */
+    $mapKeyAttribute = $map->getKeyAttribute();
+    $mapKeyColumn = $map->getKeyColumn();
+    $returnObject->$mapKeyAttribute = $this->_currentRow[$mapKeyColumn];
+
+    foreach ( $map->nested as $attributeName => $nestedMap ) {
+        $returnObject->$attributeName = new Iterator($nestedMap, $this->_resultSet, $this->_pointer, array($mapKeyColumn => $returnObject->$mapKeyAttribute) );
+    }
+
+    return $returnObject;
+
+
+next():
+    //move forward until you get something different than the current row
+    while ( $this->_currentRow !== NULL
+            && $this->_lastSeenKey == $this->_currentRow[$this->_map->keyColumn]   ) {
+
+            $this->_resultSet->data_seek(++$this->_pointer);
+            $this->_currentRow = $this->_resultSet->fetch_assoc();
+    }
+
+
+
+
+How the map comes to be:
+
+$person = Person::collection()
+            ->attr('firstName')
+            ->attr('lastName')
+            ->attr('birthDay')
+            ->attr('age', "(1231312312 - Person.birthDay)")
+            ->attr('foo', "CONCAT(1,2,3)")
+
+            ->attr('data', Person_Data::collection()
+                ->attr('email')
+                ->attr('module')
+                ->attr('concatenado', 'CONCAT(Person.firstName, Person.lastName, Person.data.id)')
+            )
+
+            ->where("Person.firstName LIKE 'a%' AND Person.data.email LIKE 'a%'")
+            ->limit(10)
+
+Builder:
+
+/* Data necessary to obtain the results */
+attributes:
+    firstName   =>
+    lastName    =>
+    birthDay    =>
+    age         => (1231312312 - Person.birthDay)
+    foo         => CONCAT(1,2,3)
+
+where:
+    Person.firstName LIKE 'a%' AND Person.data.email LIKE 'a%'
+
+nested:
+    'data':
+        attributes:
+            email       =>
+            module      =>
+            concatenado => CONCAT(Person.firstName, Person.lastName, Person.data.id)
+
+
+
+
+To get the query:
+
+Step 1: Build translation map:
+
+Person.firstName => people0.first_name
+Person.lastName => people0.first_name
+Person.birthDay => people0.birth_day
+Person.data.email => people0_data.email
+Person.data.id => people0_data.id
+
+... from ALL attributes of ALL classes in the tree
+
+
+
+
+
+
+
+
+
+
+... so far I get this
+
+
+Query
+    table: people
+    alias: people0
+    limit: 10
+
+    select:
+        firstName   =>
+        lastName    =>
+        birthDay    =>
+        age         => (1231312312 - Person.birthDay)
+        foo         => CONCAT(1,2,3)
+
+        email       =>
+        module      =>
+        concatenado => CONCAT(Person.firstName, Person.lastName, Person.data.id)
+
+
+     join:
+        type: LEFT
+        table: people_data
+        alias: people_data0
+        clause: people_data0.person_id = people0.id
+        conditions: may include some untranslated conditions here
+
+
+     where:  Person.firstName LIKE 'a%' AND Person.data.email LIKE 'a%'"
+
+
+We must obtain a final query object like this:
+
+Query:
+    table: people
+    alias: people0
+
+    select:
+        people0_firstName => people0.first_name
+        people0_lastName => people0.last_name
+        people0_birthDay => people0.birth_name
+        people0_age => (1231312312 - people0.birth_day)
+        people0_foo => CONCAT(1,2,3)
+
+        people_data0_email => people_data0.email
+        people_data0_module => people_data0.module
+        people_data0_contactenado => CONCAT(people0.first_name, people0.last_name, people0.id)
+
+    where: "people0.first_name LIKE 'a%' AND people_data0.email LIKE 'a%'"
+
+    joins:
+        type: LEFT
+        table: people_data
+        alias: people_data0
+        conditions:
+            people_data0.person_id = people0.id
+
+    limit: 10
+
+
+
+
+
+
+
+
+
+
+
+
+/* Data necessary to INTERPRET the results */
+class:          Person
+keyAttribute:   id
+keyColumn:      people0_id
+
+alias:          people0
+
+attributes:
+        firstName   => people0_firstName
+        lastName    => people0_lastName
+        birthday    => people0_birthDay
+        age         => people0_age
+        foo         => people0_foo
+
+nested:
+    data:
+        class:          Person_Data
+        keyColumn:      people_data0_id
+        keyAttribute:   id
+        attributes:
+                email       => people_data0_email
+                mobile      => people_data0_mobile
+                concatenado => people_data0_concatenado
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- older stuff ------
+
+
+
+
+
+Big result set:
+
+                                                * FK                                                    * FK
+    area_id     area_name       subject_id      subject_area_id    subject_name     indicator_id        indicator_subject       indicator_name
+*   1           A1              1               1                  S1.1             1                   1                       I1.1.1
+    1           A1              1               1                  S1.1             2                   1                       I1.1.2
+    1           A1              1               1                  S1.1             3                   1                       I1.1.3
+    1           A1              1               1                  S1.1             4                   1                       I1.1.4
+
+    1           A1              2               1                  S1.2             5                   2                       I1.2.5
+    1           A1              2               1                  S1.2             6                   2                       I1.2.6
+    1           A1              2               1                  S1.2             7                   2                       I1.2.7
+    1           A1              2               1                  S1.2             8                   2                       I1.2.8
+
+    2           A2              3               2                  S2.3             9                   3                       I2.3.9
+    2           A2              3               2                  S2.3             10                  3                       I2.3.10
+    2           A2              3               2                  S2.3             11                  3                       I2.3.11
+    2           A2              3               2                  S2.3             12                  3                       I2.3.12
+
+    2           A2              4               2                  S2.4             13                  4                       I2.4.13
+    2           A2              4               2                  S2.4             14                  4                       I2.4.14
+    2           A2              4               2                  S2.4             15                  4                       I2.4.15
+    2           A2              4               2                  S2.4             16                  4                       I2.4.16
+
+
+
+Iterator 1: Area iterator
+Parent identifier: NULL
+Primary key: area_id
+
+
+    Iterator 2: Subject iterator
+    Parent identifier: [subject_area_id = 1]
+    Primary key: subject_id
+
+
+        Iterator 3: Indicator iterator
+        Parent identifier: [indicator_subject = 1]
+        Primary key: indicator_id
+
+
+The query builder....
+
+COLLECTION              Test_Area::collection() [1]             Test_Subject::collection() [2]              Test_Indicator::collection() [3]
+
+select()                *                                       *                                           *
+where()                 id <= 50                                name LIKE '%0' OR name LIKE '%1'            -
+order()                 -                                       name DESC                                   -
+nest()                  subjects:Test_Subject [2]               indicators:Test_Indicator [2]               -
+
+_alias                  a0                                      s0                                          i0
+
+_rawQueryData
+    table               areas a0                                subjects s0                                 indicators i0
+    columns             a0.id as a0_id, a0.name as a0_name      s0.id as s0_id, s0.area_id as s0_area_id,   i0.id as i0_id, i0.subject_id as i0_subject_id, i0.name as i0_name
+                                                                s0.name as s0_name
+
+    where               a0.id <= 50                             s0.name LIKE '%0' OR s0.name LIKE '%1'
+
+    order               a0.id                                   s0.name
+    joins               subjects0 ON s0.area_id = a0.id         indicators i0 ON i0.subject_id = s0.id
+
+
+
+If find() is executed on ..
+
+collection [3]:
+
+SELECT i0.id as i0_id, i0.subject_id as i0_subject_id, i0.name as i0_name
+FROM indicators i0
+
+
+collection [2]:
+
+SELECT s0.id as s0_id, s0.area_id as s0_area_id, s0.name as s0_name,  i0.id as i0_id, i0.subject_id as i0_subject_id, i0.name as i0_name
+FROM subjects s0
+LEFT JOIN indicators i0 ON i0.subject_id = s0.id
+WHERE
+s0.name LIKE '%0' OR s0.name LIKE '%1'
+
+ORDER BY s0.name DESC
+
+
+collection [3]:
+
+SELECT a0.id as a0_id, a0.name as a0_name,    s0.id as s0_id, s0.area_id as s0_area_id, s0.name as s0_name,  i0.id as i0_id, i0.subject_id as i0_subject_id, i0.name as i0_name
+FROM areas a0
+LEFT JOIN subjects      s0 ON s0.area_id = a0.id
+LEFT JOIN indicators    i0 ON i0.subject_id = s0.id
+
+WHERE
+
+a0.id <= 50
+AND (s0.name LIKE '%0' OR s0.name LIKE '%1')
+
+ORDER BY a0.id, s0.name DESC
+
+
+$areas = Area::collection()
+        ->select('name', 'description', 'foo')
+        ->nest('subjects', Subject::collection('mySubject')
+                ->select('name', 'foo')
+                ->where("mySubject.name LIKE '%0' OR mySubject.name LIKE '%1'")
+                ->orderBy('name DESC')
+
+                ->nest('indicators', Indicator::collection())
+        )
+        ->where('Area.id <= 50 OR mySubject.id <= 50')
+        ->select('name', 'description')
+        ->find();
+
+
+
+
+foreach ( $areas as $area ) {
+    echo $area->name.':';
+
+    foreach ( $area->subjects as $subject ) {
+        echo $subject->name.':';
+
+        foreach ( $subject->indicators as $indicator ) {
+            echo $indicator->name;
+        }
+    }
+}
+
+
+
+Adding complex conditions....
+
+WHERE issue_date IS NOT NULL OR ( issue_date > $date AND issue_date < $date ) OR ( thing IS NULL AND (other_thing > 0 OR other_thing < 10) )
+
+$debit = Debit::collection()
+            ->where("Debit.issue_date IS NOT NULL OR ( Debit.issue_date > :date AND Debit.issue_date < :date ) OR ( Debit.thing IS NULL AND (Debit.other_thing > 0 OR Debit.other_thing < 10) ))
+            ->bind( array('date' => time()) )
+
+Look, let's make this easy.  You (the programmer) are not a -total- moron.  You shouldn't have to write logical expressions with an unreadable syntax [See crap 1] only
+because the ORM "must" escape, validate, and internally translate stuff.   As far as the ORM goes:  yes, it will have to translate column names into its internal convention.  The
+BEST thing you can do is make them identifiable.  Hence, the only real requirement:  Use the notation ClassName.columnName (i.e. Debit.issue_date).
+
+Using joins within the same class?  Declare an alias and use it instead
+
+$debit = Debit::collection('parent')
+        ->join(Debit::collection('child'))
+        ->where("parent.date IS NULL AND child.date < :now")
+
+want the ORM to escape/format data?  It's up to you.  Use bound parameters:  Either prefix your variables with ":" then pass then as an associative array
+
+$debit = Debit::collection()
+        ->where("Debit.issue_date > :now AND Debit.tag = :tag")
+        ->bind('now',           time(), MDB2::TIMESTAMP)
+        ->bind('description',   'note', MDB2::TEXT)         //it will quote, escape and format it for you!
+
+... maybe a shorter syntax ?
+
+$debit = Debit::collection()
+        ->where("Debit.issue_date > :now AND Debit.tag = :tag")
+        ->bind(array(
+            'now'   => time(),
+            'tag'   => 'hello'
+        ))
+
+
+want to just do crazy shit?  Go ahead....
+
+$user = User::collection()
+        ->where("User.username = "._$GET['username'])  .... it's all up to you.  You ARE responsible and careful, RIGHT ?
+
+
+Or an even better syntax, include bindings as a second parameter of WHERE....
+
+$debit = Debit::collection()
+        ->where("(Debit.issue_date > :now AND Debit.tag = :tag) OR description LIKE :other_time", array(
+            'now'           => time(),          //var type is integer: no quotes will be added
+            'tag'           => 'hello',         //var type is string: will add quotes and escape special characters
+            'other_time'    => (string)time()   //var type is string: will add quotes and escape special character
+        ))
+
+
+
+
+
+
+CRAP 1:
+
+http://book.cakephp.org/2.0/en/models/retrieving-your-data.html#complex-find-conditions
+array(
+    'OR' => array(
+        array('Company.name' => 'Future Holdings'),
+        array('Company.city' => 'CA')
+    ),
+    'AND' => array(
+        array(
+            'OR' => array(
+                array('Company.status' => 'active'),
+                'NOT' => array(
+                    array('Company.status' => array('inactive', 'suspended'))
+                )
+            )
+        )
+    )
+)
+
+http://docs.doctrine-project.org/en/latest/reference/query-builder.html#the-expr-class
+
+$qb->add('select', new Expr\Select(array('u')))
+   ->add('from', new Expr\From('User', 'u'))
+   ->add('where', $qb->expr()->orX(
+       $qb->expr()->eq('u.id', '?1'),
+       $qb->expr()->like('u.nickname', '?2')
+   ))
+   ->add('orderBy', new Expr\OrderBy('u.name', 'ASC'));
+
+
+
+See more at:
+http://en.wikipedia.org/wiki/List_of_object-relational_mapping_software#PHP
+
+
+
+
+The select string will tell the ORM how to map columns to object properties.  EVERYTHING that will become a property must be prefixed with the collection name.
+The collection name is specified in the constructor.  When no name is specified, the class name is used as the collection name.
+
+Basic example:
+
+$people = Person::collection()
+            ->select("Person.name, Person.birthday")
+            ->find()
+
+foreach ( $people as $person ) {
+    echo $person->id;   //primary keys are ALWAYS selected
+    echo $person->name;
+    echo $person->birthday;
+}
+
+
+Aliases:
+
+$people = Person::collection()
+            ->select("Person.name, floor(($now - Person.birthday)/365) as Person.age")
+            ->find()
+
+foreach ( $people as $person ) {
+    echo $person->id;   //primary keys are ALWAYS selected
+    echo $person->name;
+    echo $person->age;
+}
+
+
+Chaining (one-to-one join):
+
+$people = Person::collection()
+            ->chain( 'student', Person_Student::collection() )
+            ->select("Person.name, Person.birthday, Person_Student.code, Person_Student.house")
+            ->find();
+
+foreach ( $people as $person ) {
+    echo $person->name;
+    echo $person->birthday;
+    echo $person->student->code;
+    echo $person->student->house;
+}
+
+$people = Person::collection()
+            ->chain( 'student', Person_Student::collection() )
+            ->select("Person.name, Person.birthday, Person_Student.code as Person.code, Person_Student.house, CRAZY_FUNCTION(Person.name, Person_Student.house) as Person.thing1, CRAZY_FUNCTION(Person.name, Person_Student.house) as Person_Student.thing1")
+            ->find();
+
+foreach ( $people as $person ) {
+    echo $person->name;
+    echo $person->birthday;
+    echo $person->code;
+    echo $person->thing1;
+    echo $person->student->house;
+    echo $person->student->thing1;
+}
+
+
+
+.....
+
+JOINS don't really make sense in this architecture now, do they ?
+
+$people = Person::collection()
+            ->join( Person_Contact::collection() )
+            ->find();
+
+foreach ( $people as $person ) {
+
+}
+
+
+....
+
+$people = Person::collection()
+            ->chain('contact', Person_Contact::collection())
+            ->select("Person.firstName, Person.lastName, IF(Person.birthDay > Person_Contact.minimumAge,'minor','major') as Person.status")
+            ->find();
+
+
+
+$people = Person::collection()
+            ->chain('contact', Person_Contact::collection()
+                ->select("Person_Contact.address, Person_Contact.eMail")
+                ->where("Person_Contact.foo = true")
+            )
+            ->select("Person.firstName, Person.lastName, IF(Person.birthDay > Person_Contact.minimumAge,'minor','major') as Person.status")
+            ->where("Person.firstName LIKE 'a%'")
+            ->find();
+
+
+
+foreach ( $people as $person ) {
+    echo "$person->status";
+}
+
+
+BUILDING THE INTERNAL QUERY
+
+
+$people = Person::collection()
+            ->chain('contacts', Person_Contact::collection()
+                ->select("Person_Contact.address, Person_Contact.eMail")
+                ->where("Person_Contact.foo = true")
+            )
+            ->select("Person.firstName, Person.lastName, IF(Person.birthDay > Person_Contact.minimumAge,'minor','major') as Person.status")
+            ->where("Person.firstName LIKE 'a%'")
+            ->find();
+
+
+
+
+SELECT people0.first_name as people0_firstName, people0.last_name as people0_lastName,
+        IF(people0.birthday > contact0.minimum_age,'minor','major') as people0_status,
+        contact0.address as contact0_address, contact0.email as conttact0_eMail
+FROM people people0
+LEFT JOIN people_contacts contact0 ON contact0.id = people0.id AND contact0.foo = true
+WHERE people0.first_name LIKE 'a%'
+ORDER BY people0.id
+
+
+Person_Contact
+_identifier = 'Person_Contact'
+_alias      = 'contact0'
+
+select = array(
+    'Person_Contact.address'  => 'Person_Contact.address',
+    'Person_Contact.eMail'    => 'Person_Contact.eMail'
+)
+where = "Person_Contact.foo = true"
+
+
+Person
+_identifier = 'Person'
+_alias      = 'people0'
+
+
+select = array(
+    'Person.firstName'  => 'Person.firstName',
+    'Person.lastName'   => 'Person.lastName',
+    'IF(Person.birthDay > Person_Contact.minimumAge,'minor','major')'   => 'Person.status',
+)
+where = "Person.firstName LIKE 'a%'"
+
+STEP 1:  SELECT statement
+1.1: parse and flatten local columns:
+
+people0.first_name as people0_firstName
+people0.last_name as people0_lastName
+
+
+
+
+ [FLOOR(1371136608 - Person.birthDay)/31536000] => Person.age
+
+
+Person:
+    Person.birthDay => person0.birth_day
+    Person.firstName => person0.first_name
+    Person.lastName => person0.last_name
+    Person.minAge => person0.min_age
+    Person.otraCosa => person0.otra_cosa
+    Person.gender => person0.gender
+
+
+
+
+FLOOR(1371136608 - person0.birth_day)/31536000 as person0_age

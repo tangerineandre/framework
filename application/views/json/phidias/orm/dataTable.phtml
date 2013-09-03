@@ -1,0 +1,20 @@
+{
+    "sEcho": <?=$this->attributes->get('sEcho', 1)?>,
+    "iTotalRecords": "<?=$dataTable->getTotalRecords()?>",
+    "iTotalDisplayRecords": "<?=$dataTable->getFilteredRecords()?>",
+    "aaData": [
+      <?php $isFirstRecord = TRUE; ?>
+      <?php foreach ($dataTable->getData() as $record): ?>
+      <?php if (!$isFirstRecord) { echo ',';} ?>
+      [
+          <?php $isFirstAttribute = TRUE; ?>
+          <?php foreach ($dataTable->getColumns() as $column): ?>
+              <?php if (!$isFirstAttribute) { echo ',';} ?>
+              "<?= str_replace('"', '\"', $column->getValue($record)) ?>"
+              <?php $isFirstAttribute = FALSE; ?>
+          <?php endforeach; ?>
+      ]
+       <?php $isFirstRecord = FALSE; ?>
+       <?php endforeach; ?>
+    ]
+}

@@ -1,0 +1,23 @@
+application/control/initialize.php
+will be included be included on Aplication::initialize()
+(After environment is initialized and before controller is executed)
+
+application/control/finalize.php
+will be included be included on Aplication::finalize()
+(Before environment is finalized and right after controller is executed)
+
+
+application/control/routes.php
+May contain routes (or "aliases") to map resources to controllers
+
+E.G:
+<?php
+return array(
+    'period' => array('Period_Controller', 'collection'),
+    'period/:ID' => array('Period_Controller', 'single'),
+    'period/:ID/period' => array('Period_Controller', 'collection'),
+
+    'period/type' => array('Period_Type_Controller', 'collection'),
+    'period/type/:ID' => array('Period_Type_Controller', 'single'),
+    'period/type/:ID/period' => array('Period_Type_Controller', 'collection'),
+);

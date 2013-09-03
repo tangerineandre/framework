@@ -1,0 +1,9 @@
+<?php use Phidias\Component\Navigation ?>
+<ul>
+    <li class="home<?php if (!$trail):?> last<?php endif;?>"><a href="<?=Navigation::link()?>">&nbsp;</a></li>
+    <?php foreach ( $trail as $key => $node ):
+            end($trail);
+    ?>
+            <li <?php if ($key === key($trail)): ?>class="last"<?php endif; ?>><a href="<?=$node->getURL()?>"><?=$node->getFace()?></a></li>
+    <?php endforeach; ?>
+</ul>

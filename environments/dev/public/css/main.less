@@ -1,0 +1,112 @@
+@content-width: 60%;
+
+
+@import url("normalize.css");
+
+
+body, input, select {
+    font-family: "Droid Sans", Tahoma, sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6, p {
+    margin: 0;
+    padding: 0;
+    font-weight: normal;
+}
+
+p {
+    margin: 5px 0 15px 0;
+    text-align: justify;
+}
+
+a {
+    color: @main-color;
+    cursor: pointer;
+    text-decoration: none;
+
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
+pre.code {
+    padding: 20px;
+    font-size: 16px;
+    background: #eee;
+    border-radius: 4px;
+}
+
+
+
+.container {
+    position: relative;
+    padding: 0;
+    margin: auto;
+    max-width: @content-width;
+}
+
+
+header {
+    margin: 0 0 15px 0;
+    padding: 0;
+    background: #0092c0;
+    color: #fff;
+    padding-top: 100px;
+
+    h1 {
+        position: absolute;
+        bottom: -9px;
+
+        a {
+            color: #fff;
+        }
+    }
+
+
+    nav {
+
+        ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            text-align: right;
+
+            li {
+                display: inline;
+                margin: 0 0 0 25px;
+
+                a {
+                    opacity: 0.8;
+                    color: #fff;
+
+                    &:hover {
+                        text-decoration: none;
+                    }
+                }
+            }
+
+
+            li.active {
+                a {
+                    opacity: 1;
+                    font-weight: bold;
+                }
+            }
+        }
+
+    }
+}
+
+#contents
+{
+    h1 {
+        font-size: 1.5em;
+    }
+}
+
+footer {
+    display: block;
+    clear: both;
+    text-align: center;
+    margin: 80px 0 0 0;
+}

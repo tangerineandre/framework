@@ -1,0 +1,99 @@
+<?php
+use Phidias\Core\Debug;
+
+function printMessage($message, $depth = 0, $parent = NULL)
+{
+    $message->timer = $message->timestamp - Debug::getInitialTimestamp();
+    $messageId      = "debug_message_".$depth.preg_replace('/[^0-9]/','',$message->timer);
+    $parentClass    = $parent !== NULL ? "son_of_".$parent : '';
+
+?>
+
+    <tr id="<?=$messageId?>" class="debugger_record debugger_type_<?=$message->type?> debugger_depth_<?=$depth?> <?=$parentClass?>">
+        <td class="debugger_timestamp"><?= number_format($message->timer, 3) ?></td>
+        <td class="debugger_message" style="padding-left: <?=$depth*20 + 10?>px">
+            <span class="message">
+                <?php if ($message->messages): ?>
+                    <span class="handle">&#x25BC;</span>
+                <?php endif; ?>
+
+                <?=$message->text?>
+            </span>
+            <span class="file"><?=$message->file?>  Line: <?=$message->line?></span>
+        </td>
+
+        <td class="debugger_duration"><?php if ($message->duration): ?><?= number_format($message->duration*1000, 2) ?><?php endif; ?></td>
+        <td class="debugger_memory"><?= number_format($message->memory/1048576, 2) ?></td>
+    </tr>
+
+<?php
+
+    foreach ($message->messages as $submessage) {
+        printMessage($submessage, $depth+1, $messageId);
+    }
+
+}
+?>
+
+<link rel="stylesheet" type="text/css" media="all" href="<?=$this->URL()?>/css/debugger.css" />
+<script type="text/javascript" src="<?=$this->URL()?>/js/debugger.js"></script>
+
+<div class="phidias_debugger">
+
+    <table class="debugger_summary">
+        <thead>
+            <tr>
+                <td>Execution time</td>
+                <td>Peak memory</td>
+            </tr>
+        </thead>
+
+        <tbody>
+            <tr>
+                <td><?= number_format($totalTime*1000,2) ?> ms.</td>
+                <td><?= number_format($peakMemory/1048576, 2) ?> Mb.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <ul class="debugger_controls">
+        <li class="debugger_SQL"><a href="#" class="debugger_type_resource">Resources</a></li>
+        <li class="debugger_SQL"><a href="#" class="debugger_type_include">Includes</a></li>
+        <li class="debugger_SQL"><a href="#" class="debugger_type_SQL">Queries</a></li>
+    </ul>
+
+    <table class="debugger_messages">
+        <thead>
+            <tr>
+                <td>timer</td>
+                <td></td>
+                <td class="debugger_duration">duration [ms.]</td>
+                <td class="debugger_memory">memory [Mb.]</td>
+            </tr>
+        </thead>
+
+        <tbody>
+            <?php
+            foreach ($messages as $message) {
+                printMessage($message);
+            }
+            ?>
+        </tbody>
+    </table>
+
+    <table class="debugger_summary">
+        <thead>
+            <tr>
+                <td>Execution time</td>
+                <td>Peak memory</td>
+            </tr>
+        </thead>
+
+        <tbody>
+            <tr>
+                <td><?= number_format($totalTime*1000,2) ?> ms.</td>
+                <td><?= number_format($peakMemory/1048576, 2) ?> Mb.</td>
+            </tr>
+        </tbody>
+    </table>
+</div>

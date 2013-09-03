@@ -1,0 +1,9 @@
+<?php
+
+use Phidias\Component\Navigation;
+?>
+<ul>
+    <li><a href="<?= Navigation::link('phidias/samples/orm/collection')?>">ORM/Collection</a></li>
+    <li><a href="<?= Navigation::link('phidias/samples/orm/populate')?>" onclick="return confirm('Se borran todos los datos y se demora.  Continuar ?')">ORM/Populate</a></li>
+    <li><a href="<?= Navigation::link('phidias/samples/orm/rebuild')?>" onclick="return confirm('Se borraran todos los datos. Continuar ?')">ORM/Rebuild</a></li>
+</ul>

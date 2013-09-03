@@ -1,0 +1,49 @@
+<?php
+
+use Phidias\Core\Application;
+use Phidias\Core\Language;
+use Phidias\Component\Navigation;
+?>
+
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Phidias Framework</title>
+
+        <?=$this->output('css')?>
+        <link rel="stylesheet" type="text/css" media="all" href="<?=$this->URL()?>/css/compiled.css" />
+
+        <script src="<?=$this->URL()?>/js/jquery-1.10.1.min.js" type="text/javascript"></script>
+        <?=$this->output('js')?>
+    </head>
+
+    <body>
+
+        <header>
+            <div class="container">
+                <h1><a href="<?=Navigation::link('phidias')?>">Development Environment</a></h1>
+
+                <nav>
+                    <ul>
+                        <li <?=Application::currentResource() == 'phidias/documentation' ? 'class="active"' : ''?>><a href="<?=Navigation::link('phidias/documentation')?>">documentation</a></li>
+                        <li <?=Application::currentResource() == 'phidias/samples' ? 'class="active"' : ''?>><a href="<?=Navigation::link('phidias/samples')?>">samples</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </header>
+
+        <div id="contents">
+            <div class="container">
+                <?= $this->output() ?>
+            </div>
+        </div>
+
+        <footer>
+            <div class="container">
+                Thing: <?=Language::get('thing')?>
+            </div>
+        </footer>
+    </body>
+</html>

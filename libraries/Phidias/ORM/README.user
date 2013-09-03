@@ -1,0 +1,202 @@
+Phidias ORM (Object-Relational mapping) layer
+
+The Phidias ORM is based on two concepts: Records and Collections.
+
+A Record is an object representing a single row (or record) in the database, and a Collection is a group of records.
+
+1. Declaring records
+
+
+class Person extends Phidias\ORM\Entity
+{
+    var $id;
+    var $firstName;
+    var $lastName;
+    var $gender;
+    var $birthDay;
+
+    protected static $_schema = array(
+
+        'db'    => 'test',
+        'table' => 'people',
+
+        'keys' => array(
+            'id' => array(
+                'type'          => 'integer',
+                'unsigned'      => TRUE,
+                'autoIncrement' => TRUE
+            )
+        ),
+
+        'attributes' => array(
+            'firstName' => array(
+                'column'    => 'first_name',
+                'type'      => 'varchar',
+                'length'    => 128
+            ),
+
+            'lastName' => array(
+                'column'    => 'last_name',
+                'type'      => 'varchar',
+                'length'    => 128
+            ),
+
+            'gender' => array(
+                'type'      => 'integer',
+                'length'    => 1,
+                'unsigned'  => TRUE,
+                'default'   => 1
+            ),
+
+            'birthDay' => array(
+                'column'    => 'birthday',
+                'type'      => 'integer',
+                'null'      => TRUE
+            ),
+
+        )
+
+    );
+}
+
+
+
+
+USAGE:
+
+Creating a record:
+
+$person             = new Person;
+$person->firstName  = 'Santiago';
+$person->lastName   = 'Cortes';
+$person->birthday   = mktime(0, 0, 0, 1, 15, 1982);
+
+try {
+    $person->save();
+    echo "Saved person with ID: $person->id";
+} catch ( Exception $e ) {
+    die('something went wrong');
+}
+
+
+Loading a record:
+
+By primary key:
+
+$person = new Person(1);
+$person->find();
+if ( !$person ) {
+    die('person not found');
+}
+echo "$person->firstName $person->lastName";
+
+
+By attribute:
+
+$person = new Person('firstName', 'Santiago');
+if ( !$person ) {
+    die('Santiago not found');
+}
+echo "$person->firstName $person->lastName";
+
+* If the search by attribute returns more than one record, only the first one will be loaded.
+
+
+
+Updating a record:
+
+$person = new Person(1);
+$person->firstName = 'another name';
+$person->lastName = 'another last name';
+$person->update();
+
+
+Deleting a record:
+
+$person = new Person(1);
+try {
+    $person->delete();
+    echo "Person $person->id deleted";
+} catch ( Exception $e ) {
+    die('something went wrong');
+}
+
+
+
+
+Working with collections:
+
+Saving multiple records:
+
+$people = Person::collection();
+
+for ( $cont = 1; $cont < 10; $cont++ ) {
+    $person = new Person;
+    $person->name = "Person $cont";
+
+    $people->add($person);
+}
+
+try {
+    $people->save();
+    echo "Saved all the people";
+} catch ( Exception $e ) {
+    die('something went wrong');
+}
+
+
+Retrieving multiple records:
+
+$people = Person::collection()->find();
+
+foreach ( $people as $person ) {
+    echo "$person->firstName $person->lastName \n";
+}
+
+
+Retrieving multiple records with a complex query:
+
+$people = Person::collection()
+            ->where("Person.firstName LIKE 'S%' OR Person.lastName LIKE '%s'")
+            ->find();
+
+
+Retrieving specific columns
+
+$people = Person::collection()
+            ->attr("firstName")
+            ->where("Person.firstName LIKE 'S%' OR Person.lastName LIKE '%s'")
+            ->find();
+
+foreach ( $people as $person ) {
+    echo $person->firstName;
+    echo $person->lastName; //NOTHING
+}
+
+
+Updating multiple rows:
+
+Person::collection()
+
+    ->attr('isNinetiesKid', 1)
+    ->attr('deleted', "!Person.isDouce")
+
+    ->where("Person.birthday < :nineties", array(
+        'nineties' => mktime(0,0,0,12,31,1999)
+    ))
+    ->update()
+
+Resulting SQL:
+UPDATE people SET isNinetiesKid = 1, deleted = !isDouche WHERE birthday < 13475683000
+
+
+
+Deleting multiple rows
+
+Person::collection()
+    ->where("Person.deleted")
+    ->delete()
+
+
+
+
