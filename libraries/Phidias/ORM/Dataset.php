@@ -150,14 +150,25 @@ class Dataset
     {
         $schema = $this->getSchema();
 
-        $keys = array_keys($schema['keys']);
-        foreach ($keys as $attributeName) {
-            $this->attr($attributeName);
+        if (isset($schema['keys'])) {
+            $keys = array_keys($schema['keys']);
+            foreach ($keys as $attributeName) {
+                $this->attr($attributeName);
+            }
         }
 
-        $attributes = array_keys($schema['attributes']);
-        foreach ($attributes as $attributeName) {
-            $this->attr($attributeName);
+        if (isset($schema['attributes'])) {
+            $attributes = array_keys($schema['attributes']);
+            foreach ($attributes as $attributeName) {
+                $this->attr($attributeName);
+            }
+        }
+
+        if (isset($schema['relations'])) {
+            $attributes = array_keys($schema['relations']);
+            foreach ($attributes as $attributeName) {
+                $this->attr($attributeName);
+            }
         }
 
         return $this;
