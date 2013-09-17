@@ -29,12 +29,13 @@ class Table
         if ( isset($this->_schema['relations']) ) {
             foreach ( $this->_schema['relations'] as $relationName => $relationData ) {
 
-                $foreignEntity  = $relationData['entity'];
-                $foreignSchema  = $foreignEntity::getSchema();
+                $foreignEntity  = new $relationData['entity'];
+                $foreignSchema  = $foreignEntity->getSchema();
 
                 $firstKey           = reset($foreignSchema['keys']);
                 $firstKey['column'] = isset($relationData['column']) ? $relationData['column'] : $relationName;
                 $firstKey['table']  = $foreignSchema['table'];
+                $firstKey['null']   = 'NULL';
                 unset($firstKey['autoIncrement']);
 
                 $fields[$firstKey['column']] = $firstKey;
