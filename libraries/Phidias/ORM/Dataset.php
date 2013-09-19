@@ -361,7 +361,7 @@ class Dataset
 
             if ( $nestingData === NULL && isset($schema['relations']) ) {
                 foreach ($schema['relations'] as $relationName => $relationData) {
-                    if ( $relationData['entity'] == $nestedDataset->_className ) {
+                    if ( $relationData['entity'] == $nestedDataset->_className && $relationName == $attributeName ) {
 
                         $keys = array_keys($nestedSchema['keys']);
                         $nestingData = array(

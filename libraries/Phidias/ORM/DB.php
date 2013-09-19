@@ -59,7 +59,7 @@ class DB
     public function query($query)
     {
         $debugMessage   = strlen($query) > 1024 ? 'LONG QUERY' : $query;
-        $callbackOffset = 8;
+
         $callbacks      = array(
             array('Phidias\ORM\Dataset\Iterator', 'rewind'),
             array('Phidias\ORM\Entity', 'find'),
