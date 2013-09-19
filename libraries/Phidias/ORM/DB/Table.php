@@ -32,10 +32,14 @@ class Table
                 $foreignEntity  = new $relationData['entity'];
                 $foreignSchema  = $foreignEntity->getSchema();
 
-                $firstKey           = reset($foreignSchema['keys']);
-                $firstKey['column'] = isset($relationData['column']) ? $relationData['column'] : $relationName;
-                $firstKey['table']  = $foreignSchema['table'];
-                $firstKey['null']   = 'NULL';
+                $firstKeyIndex      = array_keys($foreignSchema['keys']);
+                $firstKeyIndex      = $firstKeyIndex[0];
+                $firstKey           = $foreignSchema['keys'][$firstKeyIndex];
+
+                $firstKey['foreignColumn']  = isset($firstKey['column']) ? $firstKey['column'] : $firstKeyIndex;
+                $firstKey['column']         = isset($relationData['column']) ? $relationData['column'] : $relationName;
+                $firstKey['table']          = $foreignSchema['table'];
+                $firstKey['null']           = 'NULL';
                 unset($firstKey['autoIncrement']);
 
                 $fields[$firstKey['column']] = $firstKey;
@@ -81,7 +85,7 @@ class Table
             $columnName = isset($fieldData['column']) ? $fieldData['column'] : $relationName;
             $query .= ",\n\tKEY `$columnName` (`$columnName`)";
 
-            $constraintQueries[] = "ALTER TABLE `{$this->_schema['table']}` ADD FOREIGN KEY ( `$columnName` ) REFERENCES `{$fieldData['table']}` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;";
+            $constraintQueries[] = "ALTER TABLE `{$this->_schema['table']}` ADD FOREIGN KEY ( `$columnName` ) REFERENCES `{$fieldData['table']}` (`{$fieldData['foreignColumn']}`) ON DELETE CASCADE ON UPDATE CASCADE;";
         }
         $query .= "\n)  ENGINE=$engine;";
 
