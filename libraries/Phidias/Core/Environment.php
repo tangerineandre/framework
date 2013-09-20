@@ -104,7 +104,7 @@ class Environment
 
 
         /* Set appropiate response format */
-        if ( Request::getBestSupportedMimeType('application/json') ) {
+        if ( Request::getBestSupportedMimeType(array('application/json', 'application/javascript')) ) {
             Application::setLayout(FALSE);
             Configuration::set('view.format', 'json');
             Configuration::set('view.extension', 'json');
