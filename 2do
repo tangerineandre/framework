@@ -57,3 +57,5 @@
 [ ] authorization
 
 [ ] output filters (doc, excel, pdf, etc)
+
+[X] Comprehensive DB exceptions (i.e. exceptions per MySQL errors)
