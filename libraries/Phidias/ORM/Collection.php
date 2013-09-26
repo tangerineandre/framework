@@ -2,7 +2,6 @@
 namespace Phidias\ORM;
 
 use Phidias\ORM\Dataset;
-use Phidias\Core\Debug;
 
 class Collection extends Dataset
 {

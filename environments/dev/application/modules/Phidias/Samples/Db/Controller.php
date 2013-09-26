@@ -41,61 +41,6 @@ class Phidias_Samples_Db_Controller extends Controller
         exit('done');
     }
 
-    public function helpers()
-    {
-        $db->insert('people', array(
-            'id'    => 1,
-            'name'  => 'Santiago'
-        ));
-
-
-        $people = Person_Entity::collection()
-                    ->attr('name')
-                    ->attr('carsWithA', Person_Car_Entity::collection()
-                            ->attr('car')
-                            ->where('carsWithA.car LIKE :condicion', array(
-                                'condicion' => "a%"
-                            ))
-                     )
-                    ->attr('carsWithB', Person_Car_Entity::collection()
-                            ->attr('car')
-                            ->where('carsWithB.car LIKE :condicion', array(
-                                'condicion' => "b%"
-                            ))
-                     );
-
-
-        foreach ($people as $person) {
-
-            foreach ($person->carsWithA as $car) {
-                 //....
-            }
-
-            foreach ($person->carsWithB as $car) {
-                //....
-            }
-
-
-        }
-
-        $period = new Period_Entity;
-        $period->setValues($JSON);
-
-
-        $period = new Period_Entity;
-        $period->name = "2012 - 2013";
-
-        $period->type = new Period_Type_Entity;
-        $period->type->name = new Noun_Entity;
-        $period->type->name->singular = "Ano academico";
-        $period->type->name->plural = "Anos academicos";
-        $period->type->name->gender = 1;
-
-        $period->add($period);
-
-
-    }
-
     public function exceptions()
     {
         /* Ok then, let's try all exceptions... */
@@ -191,6 +136,127 @@ class Phidias_Samples_Db_Controller extends Controller
         } catch (Exception $e) {
             dump(get_class($e));
         }
+
+    }
+
+
+    public function helpers()
+    {
+        /* DB helpers */
+        $db = DB::connect('test');
+
+        $db->clear('people');
+
+        $res = $db->insert('people', 1, "San'tiago");
+        dump($res);
+
+        $res = $db->insert('people', array(
+            'id'    => 2,
+            'name'  => "San'tiago"
+        ));
+        dump($res);
+
+        $res = $db->insert('people', array('id', 'name'), array(
+            array(3, "San'tiago"),
+            array(4, "Es'teban"),
+            array(5, "Leo'nardo"),
+            array(6, "Ju'lian")
+        ));
+        dump($res);
+
+        $res = $db->insert('people', NULL, array(
+            array(7, "San'tiago"),
+            array(8, "Es'teban"),
+            array(9, "Leo'nardo"),
+            array(10, "Ju'lian")
+        ));
+        dump($res);
+
+        $res = $db->insert('people', array('name'), array(
+            array("San'tiago"),
+            array("Es'teban"),
+            array("Leo'nardo"),
+            array("Ju'lian")
+        ));
+        dump($res);
+
+        $res = $db->insert('people', array('name'), array(
+            array("San'tiago")
+        ));
+        dump($res);
+
+
+        $db->delete('people', 'id = 1 OR id = 3 OR id = 5');
+
+        $updated = $db->update('people', array(
+            'name'  => "San'tiago editado"
+        ), 'id = :id', array('id' => 6));
+        dump("$updated actualizados");
+
+
+        exit;
+
+
+        //The DB/Table helper
+        //DB/Table provides a table definition.  In turn the DB utility may use it to perform type checks and sanitation
+
+        $peopleTable = new DB\Table('people');
+        $peopleTable->addColumn(array(
+            'name'          => 'id',
+            'type'          => 'integer',
+            'unsigned'      => TRUE,
+            'autoIncrement' => TRUE
+        ));
+
+        $peopleTable->addColumn(array(
+            'name'          => 'name',
+            'type'          => 'varchar',
+            'length'        => 128
+        ));
+
+        $peopleTable->addColumn(array(
+            'name'          => 'other',
+            'type'          => 'integer',
+            'length'        => 1,
+            'default'       => 0
+        ));
+
+        $peopleTable->addColumn(array(
+            'name'          => 'somethingNull',
+            'type'          => 'varchar',
+            'length'        => 64,
+            'acceptNull'    => TRUE,
+            'default'       => NULL
+        ));
+
+        $peopleTable->setPrimaryKey('id');
+
+        //May also receive an array
+        $carTable = new DB\Table('people_cars');
+        $carTable->setPrimaryKey(array('person', 'foo'));
+        $carTable->setForeignKey('person', $peopleTable, 'id');
+        $carTable->setForeignKey('foo', $fooTable, 'id');
+
+        //when setting foreign keys, if the specified column name is not present in the current columns, a new column is added with the types obtained from the foreign column
+
+        $db = DB::connect('test');
+        $db->create($peopleTable);
+
+        $db->insert($peopleTable/*, any of the available insert options */);
+
+        /*
+         * possible keys for column definition:
+         *
+         * name [required]
+         * type [required]
+         * length
+         * acceptNull   [default = FALSE]
+         * default
+         * unsigned
+         * autoIncrement
+         *
+         */
+
 
     }
 }

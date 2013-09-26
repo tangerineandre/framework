@@ -1,5 +1,5 @@
 <?php
-namespace Phidias\ORM\DB;
+namespace Phidias\DB;
 
 class Query
 {

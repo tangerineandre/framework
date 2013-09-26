@@ -81,19 +81,17 @@ class DB
         return self::$_instances[$instanceKey];
     }
 
-    public static function escapeString($string)
-    {
-        return addcslashes($string, "'");
-    }
-
-
     public function __construct($mysqli)
     {
         $this->_mysqli = $mysqli;
     }
 
-    public function query($query)
+    public function query($query, $parameters = NULL)
     {
+        if (is_array($parameters)) {
+            $query = $this->bindParameters($query, $parameters);
+        }
+
         Debug::startBlock(strlen($query) > 1024 ? '[Query too long to debug]' : $query, 'SQL');
         $result = $this->_mysqli->query($query);
         Debug::endBlock();
@@ -132,6 +130,13 @@ class DB
         return $this->_mysqli->affected_rows;
     }
 
+    public function escapeString($string)
+    {
+        return $this->_mysqli->real_escape_string($string);
+    }
+
+
+
     //http://dev.mysql.com/doc/refman/5.5/en/error-messages-server.html
     private function obtainException($errno, $error)
     {
@@ -166,12 +171,193 @@ class DB
             break;
 
             default:
-                $exception = new DB\Exception($error, $errno);
+                $exception = new DB\Exception("Uncaught DB exception: ".$error, $errno);
             break;
 
         }
 
         return $exception;
+    }
+
+
+    /* Helper functions */
+    public function sanitizeValue($value)
+    {
+        if (is_string($value)) {
+            return "'".$this->escapeString($value)."'";
+        } elseif (is_null($value)) {
+            return 'NULL';
+        } elseif (is_numeric($value)) {
+            return $value;
+        }
+
+        return NULL;
+    }
+
+    /**
+     * Given a string with parameter names preceded with a colon E.G: "My name is :name"
+     * and a hashed array of values E.G array('name' => 'Santiago')
+     * replace the parameter name in the string with the sanitized value
+     *
+     * @param string $string String to parametrize
+     * @param Array $parameterValues Array matching the parameter name in the string with the corresponding value
+     *
+     * @return string The string with sanitized parameters
+     */
+    public function bindParameters($string, $parameters)
+    {
+        $parameterNames     = array();
+        $sanitizedValues    = array();
+
+        foreach ($parameters as $key => $value) {
+            $parameterNames[]   = ":$key";
+            $sanitizedValues[]  = $this->sanitizeValue($value);
+        }
+
+        return str_replace($parameterNames, $sanitizedValues, $string);
+    }
+
+
+    /**
+     *
+     * Sanitize and insert into the specified table
+     *
+     * $db->insert('people', 1, 'Santiago');       //INSERT INTO people VALUES (1, 'Santiago')
+     * $db->insert('people', array('id' => 1, 'name' => 'Santiago'));       //INSERT INTO people (`id`, `name`) VALUES (1, [Santiago])
+     * $db->insert('people', array('id', 'name'), array(
+     *      array(1, 'Santiago'),
+     *      array(2, 'Hugo'),
+     *      .....
+     * ));       //INSERT INTO people (`id`, `name`) VALUES (1, [Santiago]), (2, 'Hugo) ...
+     */
+
+    public function insert($table, $values, $manyValues = NULL)
+    {
+        $columnNames    = NULL;
+        $targetRecords  = array();
+
+        //insert('people', array('id', 'name'), array( array(1, 'Hugo'), [...] )
+        if (is_array($manyValues)) {
+
+            $targetRecords = $manyValues;
+            if (is_array($values)) {
+                $columnNames = $values;
+            }
+
+        //insert('people', array('id' => 1, 'name' => 'Hugo'))
+        } elseif (is_array($values)) {
+
+            $columnNames        = array_keys($values);
+            $targetRecords[] = $values;
+
+        //insert('people', 1, 'Hugo')
+        } else {
+            $targetRecord = func_get_args();
+            unset($targetRecord[0]);
+            $targetRecords[] = $targetRecord;
+        }
+
+
+        $sanitizedRecords = array();
+        foreach ($targetRecords as $targetRecord) {
+
+            $fullySanitized = TRUE;
+            foreach ($targetRecord as $key => $value) {
+                $sanitizedValue = $this->sanitizeValue($value);
+
+                if ($sanitizedValue == NULL) {
+                    $fullySanitized = FALSE;
+                    break;
+                }
+
+                $targetRecord[$key] = $this->sanitizeValue($value);
+            }
+
+            if ($fullySanitized) {
+                $sanitizedRecords[] = '('.implode(', ', $targetRecord).')';
+            }
+        }
+
+        if (!count($sanitizedRecords)) {
+            return 0;
+        }
+
+        $query = "INSERT INTO $table";
+        if ($columnNames !== NULL) {
+            $query .= " (`".implode("`, `", $columnNames)."`) ";
+        }
+        $query .= " VALUES ";
+        $query .= implode(', ', $sanitizedRecords);
+
+        $this->query($query);
+        return $this->affectedRows();
+    }
+
+    public function update($table, $values, $condition = NULL, $parameters = NULL)
+    {
+        if (!is_array($values)) {
+            return FALSE;
+        }
+
+        $valuesArray = array();
+        foreach ($values as $columnName => $value) {
+            $sanitizedValue = $this->sanitizeValue($value);
+            if ($sanitizedValue !== NULL) {
+                $valuesArray[] = "`$columnName` = $sanitizedValue";
+            }
+        }
+
+        if (!count($valuesArray)) {
+            return 0;
+        }
+
+        $query = "UPDATE `$table` SET ".implode(', ', $valuesArray);
+        if ($condition) {
+
+            if (is_array($parameters)) {
+                $condition = $this->bindParameters($condition, $parameters);
+            }
+
+            $query .= " WHERE $condition";
+        }
+
+        $this->query($query);
+        return $this->affectedRows();
+    }
+
+    public function delete($table, $condition = NULL, $parameters = NULL)
+    {
+        $query = "DELETE FROM `$table`";
+        if ($condition !== NULL) {
+
+            if (is_array($parameters)) {
+                $condition = $this->bindParameters($condition, $parameters);
+            }
+
+            $query .= " WHERE $condition";
+        }
+        return $this->query($query);
+    }
+
+
+
+    //Table functions
+
+    public function drop($table)
+    {
+        return $this->query("DROP TABLE IF EXISTS `$table`");
+    }
+
+    public function truncate($table)
+    {
+        return $this->query("TRUNCATE `$table`");
+    }
+
+    public function clear($table)
+    {
+        $retval = $this->query("DELETE FROM `$table`");
+        $this->query("ALTER TABLE `$table` AUTO_INCREMENT = 1");
+        return $retval;
     }
 
 }

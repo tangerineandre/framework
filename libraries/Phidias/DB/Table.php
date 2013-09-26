@@ -1,13 +1,17 @@
 <?php
-namespace Phidias\ORM\DB;
-
-use Phidias\ORM\DB;
-use Phidias\Core\Debug;
+namespace Phidias\DB;
 
 class Table
 {
     private $_schema;
     private $_db;
+
+
+    private $name;
+    private $columns;
+    private $primary;
+    private $foreign;
+
 
     public function __construct($schema, $db)
     {
