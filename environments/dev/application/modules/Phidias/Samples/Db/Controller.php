@@ -7,6 +7,82 @@ use Phidias\DB\Exception\ReferenceNotFound;
 
 class Phidias_Samples_Db_Controller extends Controller
 {
+    public function main()
+    {
+        $db = DB::connect('test');
+
+        $peopleTable = new DB\Table('people');
+
+        $peopleTable->addColumn(array(
+            'name' => 'id',
+            'type' => 'integer',
+            'unsigned' => TRUE,
+            'autoIncrement' => TRUE
+        ));
+
+        $peopleTable->addColumn(array(
+            'name' => 'name',
+            'type' => 'varchar',
+            'length' => 128
+        ));
+
+        $peopleTable->setPrimaryKey('id');
+
+
+        $carsTable = new DB\Table('people_cars');
+        $carsTable->setForeignKey('person', $peopleTable, 'id', 'CASCADE', 'CASCADE');
+        $carsTable->setPrimaryKey('person');
+
+        $carsTable->addColumn(array(
+            'name' => 'car',
+            'type' => 'varchar',
+            'length' => 128
+        ));
+
+        $carsTable->addColumn(array(
+            'name' => 'color',
+            'type' => 'varchar',
+            'length' => 128
+        ));
+
+
+
+       $db->drop($carsTable);
+       $db->drop($peopleTable);
+
+       $db->create($peopleTable);
+       $db->create($carsTable);
+
+       $db->insert($peopleTable, array('name'), array(
+           array('Santiago'),
+           array('Leonardo'),
+           array('Esteban'),
+           array('Edison'),
+           array('Julian')
+       ));
+
+
+       $q = new DB\Select('people');
+       $q->leftJoin('people_cars', 'red_cars', 'person', 'id');
+       $q->leftJoin('people_cars', 'blue_cars', 'person', 'id', 'blue_cars.color = "blue"');
+
+       $q->field('id', 'people.id')
+         ->field('name', 'people.name')
+         ->field('blueCar', 'blue_cars.car')
+         ->field('redCar', 'blue_cars.car')
+         ->field('fullName', 'CONCAT(people.name,1,2,3)');
+
+       $q->where("people.name LIKE 's%'");
+       $q->where("people.name LIKE 'sa%'");
+
+       dump($q->toSQL());
+
+       $people = $db->select($q);
+       dumpx($people);
+
+    }
+
+
     public function transactions()
     {
         $db = DB::connect('test');
@@ -195,11 +271,10 @@ class Phidias_Samples_Db_Controller extends Controller
 
 
         exit;
+    }
 
-
-        //The DB/Table helper
-        //DB/Table provides a table definition.  In turn the DB utility may use it to perform type checks and sanitation
-
+    public function tables()
+    {
         $peopleTable = new DB\Table('people');
         $peopleTable->addColumn(array(
             'name'          => 'id',
@@ -214,49 +289,29 @@ class Phidias_Samples_Db_Controller extends Controller
             'length'        => 128
         ));
 
-        $peopleTable->addColumn(array(
-            'name'          => 'other',
-            'type'          => 'integer',
-            'length'        => 1,
-            'default'       => 0
-        ));
-
-        $peopleTable->addColumn(array(
-            'name'          => 'somethingNull',
-            'type'          => 'varchar',
-            'length'        => 64,
-            'acceptNull'    => TRUE,
-            'default'       => NULL
-        ));
-
         $peopleTable->setPrimaryKey('id');
 
-        //May also receive an array
         $carTable = new DB\Table('people_cars');
-        $carTable->setPrimaryKey(array('person', 'foo'));
-        $carTable->setForeignKey('person', $peopleTable, 'id');
-        $carTable->setForeignKey('foo', $fooTable, 'id');
 
         //when setting foreign keys, if the specified column name is not present in the current columns, a new column is added with the types obtained from the foreign column
+        $carTable->setForeignKey('person', $peopleTable, 'id');
+
+        $carTable->addColumn(array(
+            'name'          => 'car',
+            'type'          => 'varchar',
+            'length'        => 64
+        ));
+        $carTable->setPrimaryKey('person');
 
         $db = DB::connect('test');
+
+        $db->drop($carTable);
+        $db->drop('people');
+
         $db->create($peopleTable);
+        $db->create($carTable);
 
-        $db->insert($peopleTable/*, any of the available insert options */);
-
-        /*
-         * possible keys for column definition:
-         *
-         * name [required]
-         * type [required]
-         * length
-         * acceptNull   [default = FALSE]
-         * default
-         * unsigned
-         * autoIncrement
-         *
-         */
-
+        //$db->insert($peopleTable/*, any of the available insert options */);
 
     }
 }

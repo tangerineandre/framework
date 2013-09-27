@@ -218,6 +218,27 @@ class DB
     }
 
 
+    private function getTableName($incoming)
+    {
+        if (is_string($incoming)) {
+            return $incoming;
+        }
+
+        if (get_class($incoming) == 'Phidias\DB\Table') {
+            return $incoming->getName();
+        }
+
+        trigger_error("invalid table");
+    }
+
+
+    public function select(DB\Select $select)
+    {
+        return $this->query($select->toSQL());
+    }
+
+
+
     /**
      *
      * Sanitize and insert into the specified table
@@ -233,6 +254,7 @@ class DB
 
     public function insert($table, $values, $manyValues = NULL)
     {
+        $table          = $this->getTableName($table);
         $columnNames    = NULL;
         $targetRecords  = array();
 
@@ -299,6 +321,8 @@ class DB
             return FALSE;
         }
 
+        $table = $this->getTableName($table);
+
         $valuesArray = array();
         foreach ($values as $columnName => $value) {
             $sanitizedValue = $this->sanitizeValue($value);
@@ -327,6 +351,8 @@ class DB
 
     public function delete($table, $condition = NULL, $parameters = NULL)
     {
+        $table = $this->getTableName($table);
+
         $query = "DELETE FROM `$table`";
         if ($condition !== NULL) {
 
@@ -345,19 +371,71 @@ class DB
 
     public function drop($table)
     {
+        $table = $this->getTableName($table);
         return $this->query("DROP TABLE IF EXISTS `$table`");
     }
 
     public function truncate($table)
     {
+        $table = $this->getTableName($table);
         return $this->query("TRUNCATE `$table`");
     }
 
     public function clear($table)
     {
+        $table = $this->getTableName($table);
         $retval = $this->query("DELETE FROM `$table`");
         $this->query("ALTER TABLE `$table` AUTO_INCREMENT = 1");
         return $retval;
+    }
+
+
+    public function create(DB\Table $table, $engine = 'InnoDB', $charset = 'utf8', $collation = 'utf8_general_ci')
+    {
+        $tableName  = $table->getName();
+        $columns    = $table->getColumns();
+
+        $query = "CREATE TABLE IF NOT EXISTS `$tableName` ( \n";
+
+        foreach($columns as $columnData) {
+
+            $columnName         = $columnData['name'];
+            $columnType         = $columnData['type'].( isset($columnData['length']) ? '('.$columnData['length'].')' : NULL );
+            $columnUnsigned     = isset($columnData['unsigned']) && $columnData['unsigned'] ? 'unsigned' : NULL;
+            $columnNull         = isset($columnData['acceptNull']) && $columnData['acceptNull'] ? 'NULL' : 'NOT NULL';
+
+            if (array_key_exists('default', $columnData)) {
+                $defaultValue = is_null($columnData['default']) ? 'NULL' : $columnData['default'];
+                $columnDefault  = "DEFAULT $defaultValue";
+            } else {
+                $columnDefault  = NULL;
+            }
+
+            $columnIncrement    = isset($columnData['autoIncrement']) && $columnData['autoIncrement'] ? "AUTO_INCREMENT" : NULL;
+
+            $query .= "\t`$columnName` $columnType $columnUnsigned $columnNull $columnDefault $columnIncrement, \n";
+        }
+
+        $primaryKeyNames = array_keys($table->getPrimaryKeys());
+        $query .= "\tPRIMARY KEY (`".implode('`, `', $primaryKeyNames)."`)";
+
+        $foreignKeys        = $table->getForeignkeys();
+        $constraintQueries  = array();
+
+        foreach ($foreignKeys as $columnName => $relationData) {
+            $query .= ",\n\tKEY `$columnName` (`$columnName`)";
+
+            $onDelete = isset($relationData['onDelete']) ? "ON DELETE ".$relationData['onDelete'] : NULL;
+            $onUpdate = isset($relationData['onUpdate']) ? "ON UPDATE ".$relationData['onUpdate'] : NULL;
+            $constraintQueries[] = "ALTER TABLE `$tableName` ADD FOREIGN KEY ( `$columnName` ) REFERENCES `{$relationData['table']}` (`{$relationData['column']['name']}`) $onDelete $onUpdate;";
+        }
+
+        $query .= "\n) ENGINE=$engine CHARACTER SET $charset COLLATE $collation;";
+
+        $this->query($query);
+        foreach ( $constraintQueries as $constraintQuery ) {
+            $this->query($constraintQuery);
+        }
     }
 
 }
