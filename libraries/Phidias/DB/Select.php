@@ -87,6 +87,12 @@ class Select
         $this->_orders[] = $value;
     }
 
+    public function merge($select)
+    {
+        $this->_fields  = array_merge($this->_fields, $select->_fields);
+        $this->_joins   = array_merge($this->_joins, $select->_joins);
+    }
+
     public function toSQL()
     {
         $sqlQuery = "SELECT"."\n";
@@ -119,4 +125,5 @@ class Select
 
         return $sqlQuery;
     }
+
 }

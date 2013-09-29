@@ -1,39 +1,38 @@
 <?php
 namespace Phidias\Samples\Orm;
 
-use Phidias\ORM\Entity;
-
-class Person extends Entity
+class Person extends \Phidias\ORM\Entity
 {
     var $id;
     var $firstName;
     var $lastName;
     var $gender;
     var $birthDay;
-    var $color;
 
-    protected static $_schema = array(
+    /* A map maps entity attributes to table columns */
+    protected static $map = array(
 
         'db'    => 'test',
         'table' => 'people',
 
-        'keys' => array(
+        'keys' => array('id'),
+
+        'attributes' => array(
+
             'id' => array(
                 'type'          => 'integer',
                 'unsigned'      => TRUE,
                 'autoIncrement' => TRUE
-            )
-        ),
+            ),
 
-        'attributes' => array(
             'firstName' => array(
-                'column'    => 'first_name',
+                'name'      => 'first_name',
                 'type'      => 'varchar',
                 'length'    => 128
             ),
 
             'lastName' => array(
-                'column'    => 'last_name',
+                'name'      => 'last_name',
                 'type'      => 'varchar',
                 'length'    => 128
             ),
@@ -46,11 +45,13 @@ class Person extends Entity
             ),
 
             'birthDay' => array(
-                'column'    => 'birthday',
-                'type'      => 'integer',
-                'null'      => TRUE
+                'name'          => 'birthday',
+                'type'          => 'integer',
+                'acceptNull'    => TRUE,
+                'default'       => NULL
             )
         )
 
     );
+
 }

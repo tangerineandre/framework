@@ -287,7 +287,7 @@ class DB
             foreach ($targetRecord as $key => $value) {
                 $sanitizedValue = $this->sanitizeValue($value);
 
-                if ($sanitizedValue == NULL) {
+                if ($sanitizedValue === NULL) {
                     $fullySanitized = FALSE;
                     break;
                 }
@@ -335,7 +335,7 @@ class DB
             return 0;
         }
 
-        $query = "UPDATE `$table` SET ".implode(', ', $valuesArray);
+        $query = "UPDATE $table SET ".implode(', ', $valuesArray);
         if ($condition) {
 
             if (is_array($parameters)) {
@@ -353,7 +353,7 @@ class DB
     {
         $table = $this->getTableName($table);
 
-        $query = "DELETE FROM `$table`";
+        $query = "DELETE FROM $table";
         if ($condition !== NULL) {
 
             if (is_array($parameters)) {
@@ -362,7 +362,9 @@ class DB
 
             $query .= " WHERE $condition";
         }
-        return $this->query($query);
+
+        $this->query($query);
+        return $this->affectedRows();
     }
 
 

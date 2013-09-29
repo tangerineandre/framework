@@ -1,29 +1,31 @@
 <?php
 namespace Phidias\Samples\Orm;
 
-use Phidias\ORM\Entity;
-
-class Person_Data extends Entity
+class Person_Data extends Phidias\ORM\Entity
 {
     var $id;
+    var $person;
     var $address;
     var $phone;
     var $mobile;
     var $email;
 
-    protected static $_schema = array(
+    protected static $map = array(
 
-        'db' => 'test',
+        'db'    => 'test',
         'table' => 'people_data',
 
-        'keys' => array(
-            'id' => array(
-                'type'      => 'integer',
-                'unsigned'  => TRUE,
-            )
-        ),
-
+        /* Map attributes to table columns */
         'attributes' => array(
+
+            'id' => array(
+                'primary'       => TRUE,
+                'name'          => 'id',    //If the column name is not present, the attribute name is used
+                'type'          => 'integer',
+                'unsigned'      => TRUE,
+                'autoIncrement' => TRUE
+            ),
+
             'address' => array(
                 'type'      => 'text',
                 'length'    => 128,
@@ -46,16 +48,16 @@ class Person_Data extends Entity
                 'type'      => 'text',
                 'length'    => 128,
                 'null'      => TRUE
-            ),
-
+            )
         ),
 
         'relations' => array(
             'person' => array(
-                'column'    => 'id',
-                'entity'    => 'Phidias\Samples\Orm\Person'
+                'entity'    => 'Phidias\Samples\Orm\Person',
+                'attribute' => 'id',
             )
         )
 
     );
+
 }
