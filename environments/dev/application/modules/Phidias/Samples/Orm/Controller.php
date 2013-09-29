@@ -41,13 +41,20 @@ class Phidias_Samples_Orm_Controller extends Controller
 
         $messages = Message::collection();
         for ($cont = 1; $cont <= $size; $cont++) {
-            $message = new Message;
-            $message->from = $cont;
-            $message->to = rand(1, $size);
-            $message->subject = "Message $cont";
-            $message->body = "From $message->from to $message->to";
-            $messages->add($message);
+
+            $outgoingCount = rand(1, 20);
+            for ($i = 1; $i <= $outgoingCount; $i++) {
+                $message            = new Message;
+                $message->from      = $cont;
+                $message->to        = rand(1, $size);
+                $message->subject   = "From $message->from to $message->to";
+                $message->body      = "From $message->from to $message->to";
+
+                $messages->add($message);
+            }
+
         }
+
         $total = $messages->save();
         dump("Inserted $total messages");
     }
@@ -62,7 +69,7 @@ class Phidias_Samples_Orm_Controller extends Controller
                     ->relatedWith('to')
                     ->allAttributes()
                 )
-                ->limit(10)
+                ->limit(500)
                 ->find();
 
         foreach ($people as $person) {
@@ -109,7 +116,7 @@ class Phidias_Samples_Orm_Controller extends Controller
     public function delete()
     {
         $deleted = Person::collection()
-                    ->where('Person.firstName = :name', array('name' => 'Nuevo'))
+                    ->where('Person.lastName = :name', array('name' => 'personaje'))
                     ->delete();
         dump("Deleted $deleted people");
     }
@@ -125,6 +132,10 @@ class Phidias_Samples_Orm_Controller extends Controller
         dump($person);
 
 
+        $person->firstName = 'Editado';
+        $person->update();
+
+
         dump($person->delete());
 
         return;
@@ -132,5 +143,11 @@ class Phidias_Samples_Orm_Controller extends Controller
         $person = new Person(123);
         $person->firstName = 'editado';
         $person->update();
+    }
+
+    public function count()
+    {
+        dump(Person::collection()->count()." people");
+        dump(Message::collection()->count()." messages");
     }
 }

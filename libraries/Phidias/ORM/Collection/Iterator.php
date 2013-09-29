@@ -27,7 +27,7 @@ class Iterator implements \Iterator
         $this->keyAttributes   = array();
         $this->lastSeenKeys    = array();
 
-        $map    = $this->collection->getEntity()->getMap();
+        $map    = $this->collection->getMap();
         $alias  = $this->collection->getAlias();
         foreach ($map['keys'] as $keyName) {
             $this->keyAttributes[] = $alias.'_'.$keyName;

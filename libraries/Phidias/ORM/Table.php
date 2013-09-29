@@ -5,16 +5,11 @@ use Phidias\DB;
 
 class Table
 {
-    private $entity;
     private $table;
     private $db;
 
-    public function __construct($entity)
+    public function __construct($map)
     {
-        $this->entity = $entity;
-
-        $map = $this->entity->getMap();
-
         $this->table = new \Phidias\DB\Table($map['table']);
         foreach ($map['attributes'] as $attributeName => $attributeData) {
             if (!isset($attributeData['name'])) {

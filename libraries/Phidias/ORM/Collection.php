@@ -8,6 +8,8 @@ use Phidias\ORM\Collection\Iterator;
 class Collection
 {
     private $entity;        //Entity definition
+    private $map;
+
     private $attributes;    //Selected attributes
     private $nestedCollections;
     private $nestingRelation;
@@ -43,9 +45,56 @@ class Collection
     private $updateValues;
 
 
-    public function __construct($entity, $hasSingleElement = FALSE)
+    private function sanitizeMap($map)
+    {
+        if (!isset($map['attributes'])) {
+            trigger_error('invalid map: no attributes defined', E_USER_ERROR);
+        }
+
+        if (!isset($map['keys'])) {
+            trigger_error('invalid map: no keys defined', E_USER_ERROR);
+        }
+
+        foreach ($map['keys'] as $keyName) {
+            if (!isset($map['attributes'][$keyName])) {
+                trigger_error("invalid map: key '$keyName' is not defined as attribute", E_USER_ERROR);
+            }
+        }
+
+        foreach ($map['attributes'] as $attributeName => $attributeData) {
+            if (!isset($attributeData['name'])) {
+                $map['attributes'][$attributeName]['name'] = $attributeName;
+            }
+        }
+
+        if (!isset($map['relations'])) {
+            $map['relations'] = array();
+        }
+
+        foreach ($map['relations'] as $relationName => $relationData) {
+
+            if (!isset($relationData['entity'])) {
+                trigger_error('invalid map: no related entity defined', E_USER_ERROR);
+            }
+
+            if (!class_exists($relationData['entity'])) {
+                trigger_error("invalid map: related entity '{$relationData['entity']}' not found", E_USER_ERROR);
+            }
+
+        }
+
+        if (!isset($map['db'])) {
+            $map['db'] = NULL;
+        }
+
+        return $map;
+    }
+
+
+    public function __construct($entity, $map, $hasSingleElement = FALSE)
     {
         $this->entity               = $entity;
+        $this->map                  = $this->sanitizeMap($map);
         $this->attributes           = array();
         $this->nestedCollections    = array();
         $this->nestingRelation      = NULL;
@@ -56,8 +105,7 @@ class Collection
         $this->alias = 'a'.self::$nextAlias++;
 
         /* Connect to the DB */
-        $map = $this->entity->getMap();
-        $this->db = DB::connect(isset($map['db']) ? $map['db'] : NULL);
+        $this->db = DB::connect($this->map['db']);
 
         /* Select options */
         $this->selectWhere          = array();
@@ -70,6 +118,11 @@ class Collection
     public function getDB()
     {
         return $this->db;
+    }
+
+    public function getMap()
+    {
+        return $this->map;
     }
 
     public function relatedWith($relationName)
@@ -88,8 +141,8 @@ class Collection
 
             /* Determine the relation for nesting */
             $nestingRelationName    = isset($nestedCollection->nestingRelation) ? $nestedCollection->nestingRelation : $attributeName;
-            $nestedMap              = $nestedCollection->entity->getMap();
-            $localMap               = $this->entity->getMap();
+            $nestedMap              = $nestedCollection->map;
+            $localMap               = $this->map;
 
             if (isset($nestedMap['relations'][$nestingRelationName])) {
 
@@ -128,8 +181,7 @@ class Collection
 
     public function allAttributes()
     {
-        $map = $this->entity->getMap();
-        foreach ($map['attributes'] as $attributeName => $attributeData) {
+        foreach ($this->map['attributes'] as $attributeName => $attributeData) {
             $this->attr($attributeName);
         }
 
@@ -182,6 +234,21 @@ class Collection
         return $this->hasSingleElement ? $iterator->first() : $iterator;
     }
 
+    public function count()
+    {
+        $select = $this->buildSelect();
+
+        $select->limit(NULL);
+        $select->orderBy(NULL);
+        $select->field(NULL);
+
+        $select->field('count', 'COUNT(*)');
+
+        $resultSet  = $this->db->select($select);
+        $retval     = $resultSet->fetch_assoc();
+
+        return isset($retval['count']) ? $retval['count'] : NULL;
+    }
 
 
     /* Data for creating the query and obtaining the resultSet */
@@ -197,7 +264,6 @@ class Collection
 
     public function toObject($row, $pointer, $resultSet)
     {
-        $map                = $this->entity->getMap();
         $returnClassName    = get_class($this->entity);
         $returnObject       = new $returnClassName;
 
@@ -207,7 +273,7 @@ class Collection
 
         /* Build restrictions */
         $restrictions = array();
-        foreach ($map['keys'] as $keyName) {
+        foreach ($this->map['keys'] as $keyName) {
             $keyFieldName = $this->alias.'_'.$keyName;
             $restrictions[] = array(
                 'column'    => $keyFieldName,
@@ -240,9 +306,7 @@ class Collection
             $aliasMap = $this->buildAliasMap();
         }
 
-        $map    = $this->entity->getMap();
-
-        $select = new Select($map['table'], $this->alias);
+        $select = new Select($this->map['table'], $this->alias);
 
 
         /* Defined options */
@@ -258,8 +322,8 @@ class Collection
 
 
         /* Always select primary keys */
-        foreach($map['keys'] as $keyName) {
-            $columnName = isset($map['attributes'][$keyName]['name']) ? $map['attributes'][$keyName]['name'] : $keyName;
+        foreach($this->map['keys'] as $keyName) {
+            $columnName = $this->map['attributes'][$keyName]['name'];
             $select->field($this->alias.'_'.$columnName, "$this->alias.$columnName");
         }
 
@@ -267,7 +331,7 @@ class Collection
         foreach ($this->attributes as $attributeName => $attributeSource) {
 
             if ($attributeSource === NULL) {
-                $columnName = isset($map['attributes'][$attributeName]['name']) ? $map['attributes'][$attributeName]['name'] : $attributeName;
+                $columnName = $this->map['attributes'][$attributeName]['name'];
                 $attributeSource = $this->alias.'.'.$columnName;
             } else {
                 $attributeSource = $this->translate($attributeSource, $aliasMap);
@@ -280,9 +344,8 @@ class Collection
         foreach($this->nestedCollections as $attributeName => $nestedCollectionData) {
 
             $nestedCollection   = $nestedCollectionData['foreignCollection'];
-            $nestedMap          = $nestedCollection->entity->getMap();
+            $nestedMap          = $nestedCollection->map;
             $nestedSelect       = $nestedCollection->buildSelect($aliasMap);
-
 
             $joinConditions = array();
             foreach ($nestedCollection->selectWhere as $condition) {
@@ -343,8 +406,6 @@ class Collection
      */
     private function buildAliasMap($identifier = NULL, &$retval = NULL)
     {
-        $map = $this->entity->getMap();
-
         if ($identifier === NULL) {
             $identifier = basename(get_class($this->entity));
         }
@@ -353,18 +414,16 @@ class Collection
             $nestedCollection['foreignCollection']->buildAliasMap("$identifier.$attributeName", $retval);
         }
 
-        foreach ($map['attributes'] as $attributeName => $attributeData) {
-            $retval["$identifier.$attributeName"] = $this->alias.'.`'.((isset($attributeData['name']) ? $attributeData['name'] : $attributeName)).'`';
+        foreach ($this->map['attributes'] as $attributeName => $attributeData) {
+            $retval["$identifier.$attributeName"] = $this->alias.'.`'.$attributeData['name'].'`';
         }
 
         foreach ($this->customAttributes as $attributeName => $attributeSource) {
             $retval["$identifier.$attributeName"] = $this->translate($attributeSource, $retval);
         }
 
-        if (isset($map['relations'])) {
-            foreach(array_keys($map['relations']) as $attributeName) {
-                $retval["$identifier.$attributeName"] = $this->alias.'.`'.$attributeName.'`';
-            }
+        foreach(array_keys($this->map['relations']) as $attributeName) {
+            $retval["$identifier.$attributeName"] = $this->alias.'.`'.$attributeName.'`';
         }
 
         return $retval;
@@ -385,7 +444,7 @@ class Collection
     public function add($entity)
     {
         if ($this->unitOfWork === NULL) {
-            $this->unitOfWork = new Collection\UnitOfWork($this->db, $this->entity->getMap());
+            $this->unitOfWork = new Collection\UnitOfWork($this->db, $this->map);
         }
 
         $this->unitOfWork->add($entity);
@@ -404,14 +463,12 @@ class Collection
     /* Functions for updating */
     public function set($attributeName, $value)
     {
-        $map = $this->entity->getMap();
-        if (!isset($map['attributes'][$attributeName]) && !isset($map['relations'][$attributeName])) {
+        if (!isset($this->map['attributes'][$attributeName]) && !isset($this->map['relations'][$attributeName])) {
             trigger_error("attribute '$attributeName' not found");
             return $this;
         }
 
-        $columnName = isset($map['attributes'][$attributeName]['name']) ? $map['attributes'][$attributeName]['name'] : $attributeName;
-        $this->updateValues[$columnName] = $value;
+        $this->updateValues[$this->map['attributes'][$attributeName]['name']] = $value;
 
         return $this;
     }
@@ -422,7 +479,6 @@ class Collection
             trigger_error("attempt to update ignored because no conditions are defined.  If you wish to update the entire collection invoke update(TRUE)");
             return 0;
         }
-
 
         if ($this->selectWhere) {
             $aliasMap           = $this->buildAliasMap();
@@ -435,8 +491,7 @@ class Collection
             $updateCondition = NULL;
         }
 
-        $map = $this->entity->getMap();
-        return $this->db->update($map['table'].' '.$this->alias, $this->updateValues, $updateCondition);
+        return $this->db->update($this->map['table'].' '.$this->alias, $this->updateValues, $updateCondition);
     }
 
     public function delete($force = FALSE)
@@ -461,33 +516,7 @@ class Collection
             $deleteCondition = NULL;
         }
 
-        $map = $this->entity->getMap();
-        return $this->db->delete($map['table'], $deleteCondition);
+        return $this->db->delete($this->map['table'], $deleteCondition);
     }
-
-
-    public function remove($entity)
-    {
-        $map = $this->entity->getMap();
-
-        $allKeysAreSet = TRUE;
-        $deleteConditions = array();
-        foreach ($map['keys'] as $keyName) {
-            if (!isset($entity->$keyName)) {
-                $allKeysAreSet = FALSE;
-                break;
-            }
-
-            $columnName = isset($map['attributes'][$keyName]['name']) ? $map['attributes'][$keyName]['name'] : $keyName;
-            $deleteConditions[] = "`".$columnName."` = ".$this->db->sanitizeValue($entity->$keyName);
-        }
-
-        if (!$allKeysAreSet) {
-            return FALSE;
-        }
-        
-        return $this->db->delete($map['table'], implode(' AND ', $deleteConditions));
-    }
-
 
 }

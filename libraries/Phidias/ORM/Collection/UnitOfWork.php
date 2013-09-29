@@ -16,7 +16,7 @@ class UnitOfWork
         $this->map           = $map;
 
         $this->pile          = array();
-        $this->maxFlushSize  = 15000;
+        $this->maxFlushSize  = 10000;
         $this->insertCount   = 0;
     }
 
@@ -40,11 +40,11 @@ class UnitOfWork
     {
         $columnNames        = array();
         foreach ($this->map['attributes'] as $attributeName => $attributeData) {
-            $columnNames[] = isset($attributeData['name']) ? $attributeData['name'] : $attributeName;
+            $columnNames[$attributeData['name']] = $attributeData['name'];
         }
 
-        if (isset($this->map['relations'])) {
-            $columnNames = array_merge($columnNames, array_keys($this->map['relations']));
+        foreach ($this->map['relations'] as $relationName => $relationData) {
+            $columnNames[$relationName] = $relationName;
         }
 
         $this->insertCount += $this->db->insert($this->map['table'], $columnNames, $this->pile);

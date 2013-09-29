@@ -50,8 +50,13 @@ class Select
         $this->_orders      = array();
     }
 
-    public function field($fieldName, $origin = NULL)
+    public function field($fieldName = NULL, $origin = NULL)
     {
+        if ($fieldName === NULL) {
+            $this->_fields = array();
+            return $this;
+        }
+
         if ($origin === NULL) {
             $origin = $this->_tableAlias.'.'.$fieldName;
         }
@@ -63,6 +68,8 @@ class Select
     public function where($condition)
     {
         $this->_conditions[] = $condition;
+
+        return $this;
     }
 
     public function leftJoin($foreignTable, $foreignTableAlias, $foreignColumn, $localColumn, $joinCondition = NULL)
@@ -75,16 +82,26 @@ class Select
             'localColumn'       => $localColumn,
             'joinCondition'     => $joinCondition
         );
+
+        return $this;
     }
 
     public function limit($value)
     {
         $this->_limit = $value;
+
+        return $this;
     }
 
-    public function orderBy($value)
+    public function orderBy($value = NULL)
     {
-        $this->_orders[] = $value;
+        if ($value === NULL) {
+            $this->_orders = array();
+        } else {
+            $this->_orders[] = $value;
+        }
+
+        return $this;
     }
 
     public function merge($select)
