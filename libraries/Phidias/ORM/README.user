@@ -200,3 +200,66 @@ Person::collection()
 
 
 
+Nested insertion
+
+$periodTypes = Period_Type::collection()
+                ->attr('noun', Noun::collection()
+                    ->createMissing()
+                    ->allowUpdates()
+                )
+
+
+$period = new Period_Type;
+$period->description = 'Nuevo';
+
+$period->noun = new Noun;
+$period->noun->singular = 'ciclo';
+$period->noun->plural = 'ciclos';
+$period->noun->gender = 1;
+
+$periodTypes->save($period);
+
+//As defined, if noun is not found in its collection, it bill be inserted ("createMissing").
+//If the noun exists, it will be updated ("allowUpdates")
+
+
+$period = new Period_Type;
+$period->description = 'Nuevo';
+
+$period->noun = new Noun;
+$period->noun->singular = 'ciclo';
+$period->noun->plural = 'ciclos';
+$period->noun->gender = 1;
+
+$normal = Period_Type::collection()
+            ->allAttributes()   //tells the collection that all period attributes will be considered in the insertion
+            ->attr('noun', Noun::collection()->allAttributes());
+
+$normal->save($period); //if noun does not exist, an exception will be thrown:  ReferenceNotFound
+
+
+$creation = Period_Type::collection()
+            ->allAttributes()
+            ->attr('noun', Noun::collection()->allAttributes()
+                ->createMissing()
+            );
+
+$creation->save($period); //if noun does not exist, it will be created. If the creation fails the entire creation will be rolled back, and an exception thrown (cannotInsertRelated... or something)
+
+collection::save($entity)
+is shorthand for
+collection::add($entity);
+collection::save();
+
+
+//Working with single element collections:
+$person = new Person(123);
+is shorthand for ....
+
+$person = Person::single(123)->allAttributes()->find();
+
+Person::single(123), in turn, is the same as
+
+Person::collection()
+    ->where('id = 123');
+

@@ -121,6 +121,14 @@ class Phidias_Samples_Orm_Controller extends Controller
         dump("Deleted $deleted people");
     }
 
+    public function nsingle()
+    {
+        $person = Person::single(123)
+                ->find();
+        
+        dumpx($person);
+    }
+
     public function single()
     {
         $person = new Person;

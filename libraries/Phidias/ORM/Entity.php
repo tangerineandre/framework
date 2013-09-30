@@ -19,7 +19,7 @@ class Entity
         return new Collection(new $className, $className::$map);
     }
 
-    public static function single()
+    public static function single($primaryKeyValue = NULL)
     {
         $className = get_called_class();
         return new Collection(new $className, $className::$map, TRUE);
