@@ -3,8 +3,11 @@ namespace Phidias\ORM\Exception;
 
 class EntityNotFound extends \Exception
 {
-    public function __construct($entity)
+    public $primaryKeyValue;
+
+    public function __construct($primaryKeyValue)
     {
-        $this->message = "entity not found";
+        $this->primaryKeyValue = $primaryKeyValue;
+        return parent::__construct("entity not found");
     }
 }

@@ -37,7 +37,7 @@ class Collection
 
     private static $nextAlias = 0;
 
-    private $hasSingleElement;
+    private $hasOneElement;
 
     private $unitOfWork;
 
@@ -91,7 +91,7 @@ class Collection
     }
 
 
-    public function __construct($entity, $map, $hasSingleElement = FALSE)
+    public function __construct($entity, $map, $hasOneElement = FALSE, $primaryKeyValue = NULL)
     {
         $this->entity               = $entity;
         $this->map                  = $this->sanitizeMap($map);
@@ -112,7 +112,26 @@ class Collection
         $this->selectOrder          = array();
         $this->selectLimit          = NULL;
 
-        $this->hasSingleElement     = $hasSingleElement;
+        /* Special cases: collections with one element */
+        $this->hasOneElement = $hasOneElement;
+
+        if ($this->hasOneElement && $primaryKeyValue !== NULL) {
+
+            if (!is_array($primaryKeyValue)) {
+                $primaryKeyValue = array($primaryKeyValue);
+            }
+
+            if (count($primaryKeyValue) != count($this->map['keys'])) {
+                trigger_error("specified key value does not match defined keys count");
+                return;
+            }
+
+            foreach ($this->map['keys'] as $index => $keyName) {
+                $this->where("$keyName = :keyValue", array('keyValue' => $primaryKeyValue[$index]));
+                $this->limit(1);
+            }
+        }
+
     }
 
     public function getDB()
@@ -231,7 +250,7 @@ class Collection
     public function find()
     {
         $iterator = new Iterator($this);
-        return $this->hasSingleElement ? $iterator->first() : $iterator;
+        return $this->hasOneElement ? $iterator->first() : $iterator;
     }
 
     public function count()
@@ -285,7 +304,7 @@ class Collection
 
         foreach ( $this->nestedCollections as $attributeName => $nestedCollectionData ) {
             $iterator = new Iterator($nestedCollectionData['foreignCollection'], $resultSet, $pointer, $restrictions);
-            $returnObject->$attributeName = $nestedCollectionData['foreignCollection']->hasSingleElement ? $iterator->first() : $iterator;
+            $returnObject->$attributeName = $nestedCollectionData['foreignCollection']->hasOneElement ? $iterator->first() : $iterator;
         }
 
         return $returnObject;
@@ -448,6 +467,8 @@ class Collection
         }
 
         $this->unitOfWork->add($entity);
+
+        return $this;
     }
 
     public function save()
@@ -461,8 +482,15 @@ class Collection
     }
 
     /* Functions for updating */
-    public function set($attributeName, $value)
+    public function set($attributeName, $value = NULL)
     {
+        if (is_array($attributeName) && $value === NULL) {
+            foreach ($attributeName as $name => $value) {
+                $this->set($name, $value);
+            }
+            return $this;
+        }
+
         if (!isset($this->map['attributes'][$attributeName]) && !isset($this->map['relations'][$attributeName])) {
             trigger_error("attribute '$attributeName' not found");
             return $this;
@@ -517,6 +545,11 @@ class Collection
         }
 
         return $this->db->delete($this->map['table'], $deleteCondition);
+    }
+
+    public function getInsertID()
+    {
+        return $this->db->getInsertID();
     }
 
 }

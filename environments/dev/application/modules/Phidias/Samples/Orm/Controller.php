@@ -1,8 +1,6 @@
 <?php
 use Phidias\Core\Controller;
 
-use Phidias\Component\Navigation;
-
 use Phidias\Samples\Orm\Person;
 use Phidias\Samples\Orm\Person_Data;
 use Phidias\Samples\Orm\Person_Color;
@@ -34,6 +32,7 @@ class Phidias_Samples_Orm_Controller extends Controller
             $person->lastName = "Mc. $cont";
             $person->gender = rand(0,1);
             $person->birthDay = rand(1000000,10000000);
+
             $collection->add($person);
         }
         $total = $collection->save();
@@ -42,7 +41,7 @@ class Phidias_Samples_Orm_Controller extends Controller
         $messages = Message::collection();
         for ($cont = 1; $cont <= $size; $cont++) {
 
-            $outgoingCount = rand(1, 20);
+            $outgoingCount = rand(1, 10);
             for ($i = 1; $i <= $outgoingCount; $i++) {
                 $message            = new Message;
                 $message->from      = $cont;
@@ -61,24 +60,35 @@ class Phidias_Samples_Orm_Controller extends Controller
 
     public function iterate()
     {
-        /* Assuming Message entity has two relations with Person: "from" and "to" */
-
         $people = Person::collection()
                 ->allAttributes()
                 ->attr('incomingMessages', Message::collection()
                     ->relatedWith('to')
                     ->allAttributes()
+                    ->attr('autor', Person::single()
+                            ->relatedWith('from')
+                            ->allAttributes()
+                    )
+
                 )
-                ->limit(500)
+                ->limit(50)
                 ->find();
 
         foreach ($people as $person) {
-            $person->incomingMessages = $person->incomingMessages->fetchAll();
-            dump($person);
+            dump("Persona: $person->firstName $person->lastName");
+
+            dump("Mensajes recibidos:");
+            foreach ($person->incomingMessages as $message) {
+                dump("$message->subject: $message->body");
+                dump("Enviado por: {$message->autor->firstName} {$message->autor->lastName}");
+                dump("-------");
+            }
+            dump("---  ----");
+
         }
 
 
-        $outgoingMessages = Message::collection()
+        $allMessages = Message::collection()
                 ->allAttributes()
                 ->attr('sender', Person::single()
                     ->relatedWith('from')
@@ -90,10 +100,10 @@ class Phidias_Samples_Orm_Controller extends Controller
                     ->allAttributes()
                 )
 
-                ->limit(10)
+                ->limit(50)
                 ->find();
 
-        foreach($outgoingMessages as $message) {
+        foreach($allMessages as $message) {
             dump($message);
         }
 
@@ -121,37 +131,95 @@ class Phidias_Samples_Orm_Controller extends Controller
         dump("Deleted $deleted people");
     }
 
-    public function nsingle()
-    {
-        $person = Person::single(123)
-                ->find();
-        
-        dumpx($person);
-    }
-
     public function single()
     {
-        $person = new Person;
-        $person->firstName = 'Nuevo';
-        $person->lastName = 'Personaje';
-        $person->gender = 1;
+        /*
+         * Collection sintax:
+         * A special collection may be defined to handle single elements:
+         */
+
+        //Fetching an object by ID:
+        $personID = 1234;
+        $person = Person::single($personID)->allAttributes()->find();
+        if ($person === NULL) {
+            dump("$personID not found.  Moving on ...");
+        } else {
+            dump('Found');
+            dump($person);
+        }
+
+        //Inserting:
+        $person             = new Person;
+        $person->firstName  = 'Nuevo';
+        $person->lastName   = 'Personaje';
+        $person->gender     = 1;
+
+        Person::collection()->add($person)->save();
+        $lastInsertId = Person::collection()->getInsertID();
+        dump("Created person: $lastInsertId");
+
+        //Updating:
+        $count = Person::single($lastInsertId)->set('firstName', 'EDITADO')->update();
+        dump("Updated $count records");
+
+        //Deleting
+        $count = Person::single($lastInsertId)->delete();
+        dump("Deleted $count records");
+
+
+
+        /*
+         * Entity syntax:
+         * The Entity class provides wrappers around all of the above methods:
+         */
+
+        //Fetching:
+        try {
+            $person = new Person($personID);
+            dump('Found');
+            dump($person);
+        } catch (Phidias\ORM\Exception\EntityNotFound $e) {
+            dump("$personID not found.  Moving on ...");
+        }
+
+        //Inserting:
+        $person             = new Person;
+        $person->firstName  = 'Nuevo';
+        $person->lastName   = 'Personaje';
+        $person->gender     = 1;
         $person->save();
+        dump("Created person: $person->id");
 
-        dump($person);
+        //Updating:
+        $person->firstName = 'EDITADO';
+        $count = $person->update();
+        dump("Updated $count records");
+
+        //Deleting:
+        $count = $person->delete();
+        dump("Deleted $count records");
 
 
-        $person->firstName = 'Editado';
-        $person->update();
-
-
-        dump($person->delete());
-
-        return;
-
-        $person = new Person(123);
-        $person->firstName = 'editado';
-        $person->update();
+        exit;
     }
+
+    public function nesting()
+    {
+        //Nested insertion:
+        $message = new Message;
+        $message->subject = 'Hello world';
+
+        $message->from = new Person;
+        $message->from->firstName   = 'Some';
+        $message->from->lastName    = 'Author';
+        $message->from->gender      = 1;
+
+        $message->to = new Person(123);
+
+        $message->save();
+
+    }
+
 
     public function count()
     {

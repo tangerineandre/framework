@@ -189,6 +189,13 @@ class DB
             return 'NULL';
         } elseif (is_numeric($value)) {
             return $value;
+        } elseif (is_array($value)) {
+
+            $sanitizedValues = array();
+            foreach($value as $subvalue) {
+                $sanitizedValues[] = $this->sanitizeValue($subvalue);
+            }
+            return '('.implode(', ', $sanitizedValues).')';
         }
 
         return NULL;

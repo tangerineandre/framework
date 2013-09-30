@@ -79,6 +79,7 @@ class Select
             'foreignTable'      => $foreignTable,
             'foreignTableAlias' => $foreignTableAlias,
             'foreignColumn'     => $foreignColumn,
+            'localTableAlias'   => $this->_tableAlias,
             'localColumn'       => $localColumn,
             'joinCondition'     => $joinCondition
         );
@@ -123,7 +124,7 @@ class Select
         $sqlQuery .= $this->_table.' '.$this->_tableAlias."\n";
 
         foreach ( $this->_joins as $joinData ) {
-            $keyCondition   = $joinData['foreignTableAlias'].'.'.$joinData['foreignColumn'].' = '.$this->_tableAlias.'.'.$joinData['localColumn'];
+            $keyCondition   = $joinData['foreignTableAlias'].'.'.$joinData['foreignColumn'].' = '.$joinData['localTableAlias'].'.'.$joinData['localColumn'];
             $joinCondition = isset($joinData['joinCondition']) ? ' AND '.$joinData['joinCondition'] : '';
             $sqlQuery .= $joinData['type'].' JOIN '.$joinData['foreignTable'].' '.$joinData['foreignTableAlias'].' ON '.$keyCondition.$joinCondition."\n";
         }

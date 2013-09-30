@@ -1,8 +1,6 @@
 <?php
 namespace Phidias\ORM;
 
-use Phidias\DB;
-
 class Entity
 {
     protected static $map;
@@ -22,7 +20,7 @@ class Entity
     public static function single($primaryKeyValue = NULL)
     {
         $className = get_called_class();
-        return new Collection(new $className, $className::$map, TRUE);
+        return new Collection(new $className, $className::$map, TRUE, $primaryKeyValue);
     }
 
     public static function table()
@@ -31,6 +29,17 @@ class Entity
         return new Table($className::$map);
     }
 
+    public function __construct($primaryKeyValue = NULL)
+    {
+        if ($primaryKeyValue !== NULL) {
+            $entity = self::single($primaryKeyValue)->allAttributes()->find();
+            if ($entity === NULL) {
+                throw new Exception\EntityNotFound($primaryKeyValue);
+            }
+
+            $this->setValues((array)$entity);
+        }
+    }
 
     public function setValues(array $values)
     {
@@ -71,62 +80,41 @@ class Entity
     }
 
 
-    private function getIdentifyingCondition()
+    private function getPrimaryKeyValues()
     {
-        $map    = $this->getMap();
-        $db     = DB::connect(isset($map['db']) ? $map['db'] : NULL);
-
-        $allKeysAreSet = TRUE;
-        $idConditions = array();
+        $map        = $this->getMap();
+        $keyValues  = array();
         foreach ($map['keys'] as $keyName) {
             if (!isset($this->$keyName)) {
-                $allKeysAreSet = FALSE;
-                break;
+                return NULL;
             }
 
-            $columnName = isset($map['attributes'][$keyName]['name']) ? $map['attributes'][$keyName]['name'] : $keyName;
-            $idConditions[] = "`".$columnName."` = ".$db->sanitizeValue($this->$keyName);
+            $keyValues[] = $this->$keyName;
         }
 
-        if (!$allKeysAreSet) {
-            return FALSE;
-        }
-
-        return $idConditions ? implode(' AND ', $idConditions) : FALSE;
+        return $keyValues;
     }
-
 
     public function update()
     {
-        $idCondition = $this->getIdentifyingCondition();
-
-        if (!$idCondition) {
+        $keyValues = $this->getPrimaryKeyValues();
+        if ($keyValues === NULL) {
+            trigger_error("attempt to update entity without key values");
             return 0;
         }
 
-        $collection = self::collection();
-
-        $map = $this->getMap();
-        foreach ($map['attributes'] as $attributeName => $attributeData) {
-            if (!isset($this->$attributeName)) {
-                continue;
-            }
-
-            $collection->set($attributeName, $this->$attributeName);
-        }
-
-        return $collection->where($idCondition)->update();
+        return self::single($keyValues)->set($this->toArray())->update();
     }
 
     public function delete()
     {
-        $idCondition = $this->getIdentifyingCondition();
-        if (!$idCondition) {
+        $keyValues = $this->getPrimaryKeyValues();
+        if ($keyValues === NULL) {
+            trigger_error("attempt to delete entity without key values");
             return 0;
         }
 
-        return self::collection()->where($idCondition)->delete();
+        return self::single($keyValues)->delete();
     }
-
 
 }
