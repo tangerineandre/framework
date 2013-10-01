@@ -292,14 +292,14 @@ class DB
 
             $fullySanitized = TRUE;
             foreach ($targetRecord as $key => $value) {
+
                 $sanitizedValue = $this->sanitizeValue($value);
 
                 if ($sanitizedValue === NULL) {
                     $fullySanitized = FALSE;
-                    break;
+                } else {
+                    $targetRecord[$key] = $sanitizedValue;
                 }
-
-                $targetRecord[$key] = $this->sanitizeValue($value);
             }
 
             if ($fullySanitized) {
@@ -308,7 +308,7 @@ class DB
         }
 
         if (!count($sanitizedRecords)) {
-            return 0;
+            throw new DB\Exception\NothingToInsert('no records passed sanitation');
         }
 
         $query = "INSERT INTO $table";

@@ -27,12 +27,32 @@ class UnitOfWork
 
     public function add($entity)
     {
-        $this->pile[] = (array)$entity;
+        $this->pile[] = $this->toRecord($entity);
 
         $pileSize = count($this->pile);
         if ($pileSize >= $this->maxFlushSize ) {
             $this->save();
         }
+    }
+
+    private function toRecord($entity)
+    {
+        $record = array();
+        foreach ($this->map['attributes'] as $attributeName => $attributeData) {
+
+            if (!isset($entity->$attributeName)) {
+                $record[$attributeData['column']] = NULL;
+                continue;
+            }
+
+            if ($entity->$attributeName instanceof \Phidias\ORM\Entity) {
+                $entity->$attributeName = $entity->$attributeName->getPrimaryKeyValues()[0];
+            }
+
+            $record[$attributeData['column']] = $entity->$attributeName;
+        }
+
+        return $record;
     }
 
 

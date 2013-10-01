@@ -80,7 +80,7 @@ class Entity
     }
 
 
-    private function getPrimaryKeyValues()
+    public function getPrimaryKeyValues()
     {
         $map        = $this->getMap();
         $keyValues  = array();
