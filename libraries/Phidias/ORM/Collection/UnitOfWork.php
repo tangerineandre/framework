@@ -42,19 +42,15 @@ class UnitOfWork
 
             if (!isset($entity->$attributeName)) {
                 $record[$attributeData['column']] = NULL;
-                continue;
+            } elseif ($entity->$attributeName instanceof \Phidias\ORM\Entity) {
+                $record[$attributeData['column']] = $entity->$attributeName->getPrimaryKeyValues()[0];
+            } else {
+                $record[$attributeData['column']] = $entity->$attributeName;
             }
-
-            if ($entity->$attributeName instanceof \Phidias\ORM\Entity) {
-                $entity->$attributeName = $entity->$attributeName->getPrimaryKeyValues()[0];
-            }
-
-            $record[$attributeData['column']] = $entity->$attributeName;
         }
 
         return $record;
     }
-
 
     public function save()
     {
