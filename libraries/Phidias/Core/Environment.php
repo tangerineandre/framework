@@ -212,4 +212,9 @@ class Environment
         return FALSE;
     }
 
+    public static function getStack()
+    {
+        return self::$_stack;
+    }
+
 }

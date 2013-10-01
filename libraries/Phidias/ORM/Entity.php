@@ -5,7 +5,7 @@ class Entity
 {
     protected static $map;
 
-    private function getMap()
+    public function getMap()
     {
         $className = get_called_class();
         return $className::$map;

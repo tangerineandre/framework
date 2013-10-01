@@ -6,17 +6,34 @@ use Phidias\DB;
 class Table
 {
     private $table;
+    private $map;
     private $db;
+
+    private static $lock = array();
 
     public function __construct($map)
     {
-        $this->table = new \Phidias\DB\Table($map['table']);
+        $this->map      = $map;
+        $this->table    = new \Phidias\DB\Table($map['table']);
+
         foreach ($map['attributes'] as $attributeName => $attributeData) {
-            if (!isset($attributeData['name'])) {
-                $attributeData['name'] = $attributeName;
+            if (!isset($attributeData['column'])) {
+                $attributeData['column'] = $attributeName;
             }
+            $attributeData['name'] = $attributeData['column'];
+
             $this->table->addColumn($attributeData);
         }
+
+        $this->table->setPrimaryKey($map['keys']);
+
+
+        /* Avoid recurson on self-referencing instances */
+        if (isset(self::$lock[$map['table']])) {
+            return;
+        }
+        self::$lock[$map['table']] = TRUE;
+
 
         if (isset($map['relations'])) {
             foreach($map['relations'] as $relationName => $relationData) {
@@ -27,9 +44,16 @@ class Table
             }
         }
 
-        $this->table->setPrimaryKey($map['keys']);
+        unset(self::$lock[$map['table']]);
+    }
 
-        $this->db = DB::connect(isset($map['db']) ? $map['db'] : NULL);
+    private function getDB()
+    {
+        if ($this->db === NULL) {
+            $this->db = DB::connect(isset($this->map['db']) ? $this->map['db'] : NULL);
+        }
+
+        return $this->db;
     }
 
     public function getDbTable()
@@ -39,22 +63,22 @@ class Table
 
     public function drop()
     {
-        $this->db->drop($this->table);
+        $this->getDB()->drop($this->table);
     }
 
     public function truncate()
     {
-        $this->db->truncate($this->table);
+        $this->getDB()->truncate($this->table);
     }
 
     public function clear()
     {
-        $this->db->clear($this->table);
+        $this->getDB()->clear($this->table);
     }
 
     public function create()
     {
-        $this->db->create($this->table);
+        $this->getDB()->create($this->table);
     }
 
 }

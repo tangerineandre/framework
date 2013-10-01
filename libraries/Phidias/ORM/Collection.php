@@ -62,8 +62,8 @@ class Collection
         }
 
         foreach ($map['attributes'] as $attributeName => $attributeData) {
-            if (!isset($attributeData['name'])) {
-                $map['attributes'][$attributeName]['name'] = $attributeName;
+            if (!isset($attributeData['column'])) {
+                $map['attributes'][$attributeName]['column'] = $attributeName;
             }
         }
 
@@ -342,7 +342,7 @@ class Collection
 
         /* Always select primary keys */
         foreach($this->map['keys'] as $keyName) {
-            $columnName = $this->map['attributes'][$keyName]['name'];
+            $columnName = $this->map['attributes'][$keyName]['column'];
             $select->field($this->alias.'_'.$columnName, "$this->alias.$columnName");
         }
 
@@ -350,7 +350,7 @@ class Collection
         foreach ($this->attributes as $attributeName => $attributeSource) {
 
             if ($attributeSource === NULL) {
-                $columnName = $this->map['attributes'][$attributeName]['name'];
+                $columnName = $this->map['attributes'][$attributeName]['column'];
                 $attributeSource = $this->alias.'.'.$columnName;
             } else {
                 $attributeSource = $this->translate($attributeSource, $aliasMap);
@@ -434,7 +434,7 @@ class Collection
         }
 
         foreach ($this->map['attributes'] as $attributeName => $attributeData) {
-            $retval["$identifier.$attributeName"] = $this->alias.'.`'.$attributeData['name'].'`';
+            $retval["$identifier.$attributeName"] = $this->alias.'.`'.$attributeData['column'].'`';
         }
 
         foreach ($this->customAttributes as $attributeName => $attributeSource) {
@@ -496,7 +496,7 @@ class Collection
             return $this;
         }
 
-        $this->updateValues[$this->map['attributes'][$attributeName]['name']] = $value;
+        $this->updateValues[$this->map['attributes'][$attributeName]['column']] = $value;
 
         return $this;
     }

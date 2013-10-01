@@ -40,7 +40,7 @@ class UnitOfWork
     {
         $columnNames        = array();
         foreach ($this->map['attributes'] as $attributeName => $attributeData) {
-            $columnNames[$attributeData['name']] = $attributeData['name'];
+            $columnNames[$attributeData['column']] = $attributeData['column'];
         }
 
         foreach ($this->map['relations'] as $relationName => $relationData) {
