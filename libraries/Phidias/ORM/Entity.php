@@ -78,10 +78,6 @@ class Entity
     {
         if ($primaryKeyValue !== NULL) {
             $entity = self::single($primaryKeyValue)->allAttributes()->find();
-            if ($entity === NULL) {
-                throw new Exception\EntityNotFound(get_called_class(), $primaryKeyValue);
-            }
-
             $this->setValues((array)$entity);
         }
     }

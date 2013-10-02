@@ -46,14 +46,15 @@ class Route
         }
 
         if (isset($path['_controller'])) {
-            $class      = $path['_controller'][0];
-            $method     = $path['_controller'][1];
+            $class          = $path['_controller'][0];
+            $method         = $path['_controller'][1];
+            $fixedArguments = isset($path['_controller'][2]) ? $path['_controller'][2] : array();
 
             if ( is_callable(array($class, $method.'_'.$requestMethod)) ) {
                 $method = $method.'_'.$requestMethod;
             }
 
-            return array($resource, $class, $method, $arguments);
+            return array($resource, $class, $method, array_merge($arguments, $fixedArguments));
         }
 
         return false;

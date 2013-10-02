@@ -38,6 +38,7 @@ class Collection
     private static $nextAlias = 0;
 
     private $hasOneElement;
+    private $primaryKeyValue;
 
     private $unitOfWork;
 
@@ -55,7 +56,7 @@ class Collection
         $this->customAttributes     = array();
 
         /* Allocate a unique alias */
-        $this->alias = 'a'.self::$nextAlias++;
+        $this->alias = $this->map['table'].self::$nextAlias++;
 
         /* Connect to the DB */
         $this->db = DB::connect($this->map['db']);
@@ -66,7 +67,8 @@ class Collection
         $this->selectLimit          = NULL;
 
         /* Special cases: collections with one element */
-        $this->hasOneElement = $hasOneElement;
+        $this->hasOneElement    = $hasOneElement;
+        $this->primaryKeyValue  = $primaryKeyValue;
 
         if ($this->hasOneElement && $primaryKeyValue !== NULL) {
 
@@ -214,7 +216,15 @@ class Collection
     public function find()
     {
         $iterator = new Iterator($this);
-        return $this->hasOneElement ? $iterator->first() : $iterator;
+
+        if ($this->hasOneElement) {
+            $iterator = $iterator->first();
+            if ($iterator === NULL) {
+                throw new Exception\EntityNotFound(get_called_class(), $this->primaryKeyValue);
+            }
+        }
+
+        return $iterator;
     }
 
     public function count()
@@ -452,7 +462,6 @@ class Collection
         }
 
         if (!isset($this->map['attributes'][$attributeName])) {
-            trigger_error("attribute '$attributeName' not found");
             return $this;
         }
 

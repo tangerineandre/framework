@@ -59,7 +59,7 @@ class Phidias_Orm_Controller extends Controller
     public function install()
     {
         $environmentStack = Environment::getStack();
-        
+
         $entities = array();
         $this->findEntities($entities, $environmentStack[0].'/application/modules');
         $organized = array();
