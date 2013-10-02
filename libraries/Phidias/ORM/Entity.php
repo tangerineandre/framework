@@ -89,7 +89,19 @@ class Entity
     public function setValues(array $values)
     {
         foreach ($values as $key => $value) {
-            $this->$key = $value;
+
+            if (isset($this->$key) && ($this->$key instanceof Entity)) {
+
+                $this->$key->setValues($value);
+                try {
+                    $this->$key->save();
+                } catch (\Phidias\DB\Exception\DuplicateKey $e) {
+                    //sssh, no worries
+                }
+
+            } else {
+                $this->$key = $value;
+            }
         }
     }
 
@@ -107,6 +119,7 @@ class Entity
     public function save()
     {
         $collection = self::collection();
+        $collection->allAttributes();
         $collection->add($this);
 
         if ($collection->save() == 1) {

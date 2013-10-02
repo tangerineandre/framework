@@ -82,10 +82,19 @@ class UnitOfWork
 
             $targetColumn = $this->map['attributes'][$attributeName]['column'];
 
-            if (!isset($object[$attributeName]) || is_array($object[$attributeName]) || is_object($object[$attributeName]) ) {
+            if (!isset($object[$attributeName]) || is_array($object[$attributeName]) ) {
+
                 $record[$targetColumn] = NULL;
+
+            } elseif ($object[$attributeName] instanceof \Phidias\ORM\Entity) {
+
+                $keyValues = $object[$attributeName]->getPrimaryKeyValues();
+                $record[$targetColumn] = array_pop($keyValues);
+
             } else {
+
                 $record[$targetColumn] = $object[$attributeName];
+
             }
         }
 
