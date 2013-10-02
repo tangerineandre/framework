@@ -16,13 +16,23 @@ class Table
         $this->map      = $map;
         $this->table    = new \Phidias\DB\Table($map['table']);
 
-        foreach ($map['attributes'] as $attributeName => $attributeData) {
-            if (!isset($attributeData['column'])) {
-                $attributeData['column'] = $attributeName;
-            }
-            $attributeData['name'] = $attributeData['column'];
+        foreach ($map['attributes'] as $attributeData) {
 
-            $this->table->addColumn($attributeData);
+            $columnData         = $attributeData;
+            $columnData['name'] = $attributeData['column'];
+
+            if (isset($attributeData['entity'])) {
+                $foreignMap = $attributeData['entity']::getMap();
+
+                if (!isset($foreignMap['attributes'][$attributeData['attribute']])) {
+                    trigger_error("related attribute '{$attributeData['attribute']}' not found in entity '{$attributeData['entity']}'", E_USER_ERROR);
+                }
+
+                $columnData = array_merge($columnData, $foreignMap['attributes'][$attributeData['attribute']]);
+                unset($columnData['autoIncrement']);
+            }
+
+            $this->table->addColumn($columnData);
         }
 
         $this->table->setPrimaryKey($map['keys']);
@@ -34,14 +44,13 @@ class Table
         }
         self::$lock[$map['table']] = TRUE;
 
+        foreach($map['relations'] as $relationData) {
 
-        if (isset($map['relations'])) {
-            foreach($map['relations'] as $relationName => $relationData) {
-                $relatedEntity = new $relationData['entity'];
-                $onDelete = isset($relationData['onDelete']) ? $relationData['onDelete'] : NULL;
-                $onUpdate = isset($relationData['onUpdate']) ? $relationData['onUpdate'] : NULL;
-                $this->table->setForeignKey($relationName, $relatedEntity::table()->getDbTable(), $relationData['attribute'], $onDelete, $onUpdate);
-            }
+            $relatedEntity  = new $relationData['entity'];
+            $onDelete       = isset($relationData['onDelete']) ? $relationData['onDelete'] : NULL;
+            $onUpdate       = isset($relationData['onUpdate']) ? $relationData['onUpdate'] : NULL;
+
+            $this->table->setForeignKey($relationData['column'], $relatedEntity::table()->getDbTable(), $relationData['attribute'], $onDelete, $onUpdate);
         }
 
         unset(self::$lock[$map['table']]);

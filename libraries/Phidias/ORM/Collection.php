@@ -44,57 +44,10 @@ class Collection
     /* Attribute values to be updated */
     private $updateValues;
 
-
-    private function sanitizeMap($map)
-    {
-        if (!isset($map['attributes'])) {
-            trigger_error('invalid map: no attributes defined', E_USER_ERROR);
-        }
-
-        if (!isset($map['keys'])) {
-            trigger_error('invalid map: no keys defined', E_USER_ERROR);
-        }
-
-        foreach ($map['keys'] as $keyName) {
-            if (!isset($map['attributes'][$keyName])) {
-                trigger_error("invalid map: key '$keyName' is not defined as attribute", E_USER_ERROR);
-            }
-        }
-
-        foreach ($map['attributes'] as $attributeName => $attributeData) {
-            if (!isset($attributeData['column'])) {
-                $map['attributes'][$attributeName]['column'] = $attributeName;
-            }
-        }
-
-        if (!isset($map['relations'])) {
-            $map['relations'] = array();
-        }
-
-        foreach ($map['relations'] as $relationName => $relationData) {
-
-            if (!isset($relationData['entity'])) {
-                trigger_error('invalid map: no related entity defined', E_USER_ERROR);
-            }
-
-            if (!class_exists($relationData['entity'])) {
-                trigger_error("invalid map: related entity '{$relationData['entity']}' not found", E_USER_ERROR);
-            }
-
-        }
-
-        if (!isset($map['db'])) {
-            $map['db'] = NULL;
-        }
-
-        return $map;
-    }
-
-
     public function __construct($entity, $map, $hasOneElement = FALSE, $primaryKeyValue = NULL)
     {
         $this->entity               = $entity;
-        $this->map                  = $this->sanitizeMap($map);
+        $this->map                  = $map;
         $this->attributes           = array();
         $this->nestedCollections    = array();
         $this->nestingRelation      = NULL;
@@ -144,6 +97,17 @@ class Collection
         return $this->map;
     }
 
+    public function getAttributes()
+    {
+        return $this->attributes;
+    }
+
+    public function getNestedCollections()
+    {
+        return $this->nestedCollections;
+    }
+
+
     public function relatedWith($relationName)
     {
         $this->nestingRelation = $relationName;
@@ -163,15 +127,15 @@ class Collection
             $nestedMap              = $nestedCollection->map;
             $localMap               = $this->map;
 
-            if (isset($nestedMap['relations'][$nestingRelationName])) {
+            if ( isset($localMap['relations'][$nestingRelationName]) ) {
+
+                $localColumn    = $localMap['relations'][$nestingRelationName]['column'];
+                $foreignColumn  = $localMap['relations'][$nestingRelationName]['attribute'];
+
+            } elseif ( isset($nestedMap['relations'][$nestingRelationName]) ) {
 
                 $localColumn    = $nestedMap['relations'][$nestingRelationName]['attribute'];
-                $foreignColumn  = $nestingRelationName;
-
-            } elseif (isset($localMap['relations'][$nestingRelationName])) {
-
-                $localColumn    = $nestingRelationName;
-                $foreignColumn  = $localMap['relations'][$nestingRelationName]['attribute'];
+                $foreignColumn  = $nestedMap['relations'][$nestingRelationName]['column'];
 
             } else {
                 trigger_error("Relation '$nestingRelationName' not found.  Specify the related attribute with collection::relatedWith", E_USER_ERROR);
@@ -441,10 +405,6 @@ class Collection
             $retval["$identifier.$attributeName"] = $this->translate($attributeSource, $retval);
         }
 
-        foreach(array_keys($this->map['relations']) as $attributeName) {
-            $retval["$identifier.$attributeName"] = $this->alias.'.`'.$attributeName.'`';
-        }
-
         return $retval;
     }
 
@@ -463,7 +423,7 @@ class Collection
     public function add($entity)
     {
         if ($this->unitOfWork === NULL) {
-            $this->unitOfWork = new Collection\UnitOfWork($this->db, $this->map);
+            $this->unitOfWork = new Collection\UnitOfWork($this);
         }
 
         $this->unitOfWork->add($entity);
@@ -491,7 +451,7 @@ class Collection
             return $this;
         }
 
-        if (!isset($this->map['attributes'][$attributeName]) && !isset($this->map['relations'][$attributeName])) {
+        if (!isset($this->map['attributes'][$attributeName])) {
             trigger_error("attribute '$attributeName' not found");
             return $this;
         }

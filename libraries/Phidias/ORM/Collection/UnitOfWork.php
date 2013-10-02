@@ -3,17 +3,21 @@ namespace Phidias\ORM\Collection;
 
 class UnitOfWork
 {
-    private $db;
+    private $attributes;
+    private $nestedCollections;
     private $map;
+    private $db;
 
     private $pile;
     private $maxFlushSize;
     private $insertCount;
 
-    public function __construct($db, $map)
+    public function __construct($collection)
     {
-        $this->db            = $db;
-        $this->map           = $map;
+        $this->attributes           = $collection->getAttributes();
+        $this->nestedCollections    = $collection->getNestedCollections();
+        $this->map                  = $collection->getMap();
+        $this->db                   = $collection->getDB();
 
         $this->pile          = array();
         $this->maxFlushSize  = 10000;
@@ -35,32 +39,11 @@ class UnitOfWork
         }
     }
 
-    private function toRecord($entity)
-    {
-        $record = array();
-        foreach ($this->map['attributes'] as $attributeName => $attributeData) {
-
-            if (!isset($entity->$attributeName)) {
-                $record[$attributeData['column']] = NULL;
-            } elseif ($entity->$attributeName instanceof \Phidias\ORM\Entity) {
-                $record[$attributeData['column']] = $entity->$attributeName->getPrimaryKeyValues()[0];
-            } else {
-                $record[$attributeData['column']] = $entity->$attributeName;
-            }
-        }
-
-        return $record;
-    }
-
     public function save()
     {
-        $columnNames        = array();
-        foreach ($this->map['attributes'] as $attributeName => $attributeData) {
-            $columnNames[$attributeData['column']] = $attributeData['column'];
-        }
-
-        foreach ($this->map['relations'] as $relationName => $relationData) {
-            $columnNames[$relationName] = $relationName;
+        $columnNames = array();
+        foreach (array_keys($this->attributes) as $attributeName) {
+            $columnNames[] = $this->map['attributes'][$attributeName]['column'];
         }
 
         $this->insertCount += $this->db->insert($this->map['table'], $columnNames, $this->pile);
@@ -68,4 +51,45 @@ class UnitOfWork
 
         return $this->insertCount;
     }
+
+    private function toRecord($object)
+    {
+        $record = array();
+
+        $object = (array)$object;
+
+        /* Resolve nestings */
+        foreach ($this->nestedCollections as $attributeName => $collectionData) {
+
+            if (!isset($object[$attributeName])) {
+                continue;
+            }
+
+            $nestedMap     = $collectionData['foreignCollection']->getMap();
+            $expectedKey   = $nestedMap['keys'][0];
+            $collectionData['foreignCollection']->add($object[$attributeName]);
+
+            try {
+                $collectionData['foreignCollection']->save();
+                $object[$attributeName] = isset($nestedMap['attributes'][$expectedKey]['autoIncrement']) ? $collectionData['foreignCollection']->getInsertID() : $object[$attributeName][$expectedKey];
+            } catch (\Phidias\DB\Exception\DuplicateKey $e) {
+                $object[$attributeName] = $object[$attributeName][$expectedKey];
+            }
+
+        }
+
+        foreach (array_keys($this->attributes) as $attributeName) {
+
+            $targetColumn = $this->map['attributes'][$attributeName]['column'];
+
+            if (!isset($object[$attributeName]) || is_array($object[$attributeName]) || is_object($object[$attributeName]) ) {
+                $record[$targetColumn] = NULL;
+            } else {
+                $record[$targetColumn] = $object[$attributeName];
+            }
+        }
+
+        return $record;
+    }
+
 }

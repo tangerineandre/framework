@@ -5,28 +5,73 @@ class Entity
 {
     protected static $map;
 
-    public function getMap()
+
+    private static function sanitizeMap($map)
+    {
+        if (!isset($map['attributes'])) {
+            trigger_error('invalid map: no attributes defined', E_USER_ERROR);
+        }
+
+        if (!isset($map['keys'])) {
+            trigger_error('invalid map: no keys defined', E_USER_ERROR);
+        }
+
+        foreach ($map['keys'] as $keyName) {
+            if (!isset($map['attributes'][$keyName])) {
+                trigger_error("invalid map: key '$keyName' is not defined as attribute", E_USER_ERROR);
+            }
+        }
+
+        $map['relations'] = array();
+
+        foreach ($map['attributes'] as $attributeName => &$attributeData) {
+            if (!isset($attributeData['column'])) {
+                $attributeData['column'] = $attributeName;
+            }
+
+            if (isset($attributeData['entity'])) {
+
+                if (!class_exists($attributeData['entity'])) {
+                    trigger_error("invalid map: related entity '{$attributeData['entity']}' not found", E_USER_ERROR);
+                }
+
+                if (!isset($attributeData['attribute'])) {
+                    trigger_error("invalid map: no attribute specified for relation '$attributeName'", E_USER_ERROR);
+                }
+
+                $map['relations'][$attributeName] = $attributeData;
+            }
+        }
+
+        if (!isset($map['db'])) {
+            $map['db'] = NULL;
+        }
+
+        return $map;
+    }
+
+
+    public static function getMap()
     {
         $className = get_called_class();
-        return $className::$map;
+        return self::sanitizeMap($className::$map);
     }
 
     public static function collection()
     {
         $className = get_called_class();
-        return new Collection(new $className, $className::$map);
+        return new Collection(new $className, self::getMap());
     }
 
     public static function single($primaryKeyValue = NULL)
     {
         $className = get_called_class();
-        return new Collection(new $className, $className::$map, TRUE, $primaryKeyValue);
+        return new Collection(new $className, self::getMap(), TRUE, $primaryKeyValue);
     }
 
     public static function table()
     {
-        $className = get_called_class();
-        return new Table($className::$map);
+        return new Table(self::getMap());
     }
 
     public function __construct($primaryKeyValue = NULL)
@@ -34,7 +79,7 @@ class Entity
         if ($primaryKeyValue !== NULL) {
             $entity = self::single($primaryKeyValue)->allAttributes()->find();
             if ($entity === NULL) {
-                throw new Exception\EntityNotFound($primaryKeyValue);
+                throw new Exception\EntityNotFound(get_called_class(), $primaryKeyValue);
             }
 
             $this->setValues((array)$entity);
@@ -65,7 +110,7 @@ class Entity
         $collection->add($this);
 
         if ($collection->save() == 1) {
-            $map = $this->getMap();
+            $map = self::getMap();
 
             foreach ($map['keys'] as $keyName) {
                 if ( isset($map['attributes'][$keyName]['autoIncrement']) && $map['attributes'][$keyName]['autoIncrement'] ) {
@@ -82,7 +127,7 @@ class Entity
 
     public function getPrimaryKeyValues()
     {
-        $map        = $this->getMap();
+        $map        = self::getMap();
         $keyValues  = array();
         foreach ($map['keys'] as $keyName) {
             if (!isset($this->$keyName)) {
