@@ -27,6 +27,13 @@ class Entity
     public function setID($_id)
     {
         $this->_id = $_id;
+
+        $idValue    = (array)$_id;
+        $map        = self::getMap();
+        foreach ($map['keys'] as $index => $attributeName) {
+            $this->$attributeName = isset($idValue[$index]) ? $idValue[$index] : NULL;
+        }
+
     }
 
 

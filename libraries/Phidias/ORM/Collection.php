@@ -267,7 +267,7 @@ class Collection
         $id = array();
         foreach ($this->map['keys'] as $keyName) {
             $keyFieldName = $this->alias.'_'.$keyName;
-            $id[$keyName] = $row[$keyFieldName]; //we can assume this value is set since the collection  ALWAYS includes the key attributes
+            $id[] = $row[$keyFieldName]; //we can assume this value is set since the collection  ALWAYS includes the key attributes
         }
 
         /* Create the new Entity */
@@ -499,7 +499,7 @@ class Collection
 
         $newID = array();
         foreach ($this->map['keys'] as $attributeName) {
-            $newID[$attributeName] = isset($this->map['attributes'][$attributeName]['autoIncrement']) ? $this->db->getInsertID() : $entity->$attributeName;
+            $newID[] = isset($this->map['attributes'][$attributeName]['autoIncrement']) ? $this->db->getInsertID() : $entity->$attributeName;
         }
         $entity->setID($newID);
 
