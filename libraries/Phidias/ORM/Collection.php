@@ -38,14 +38,13 @@ class Collection
     private static $nextAlias = 0;
 
     private $hasOneElement;
-    private $primaryKeyValue;
 
     private $unitOfWork;
 
     /* Attribute values to be updated */
     private $updateValues;
 
-    public function __construct($entity, $map, $hasOneElement = FALSE, $primaryKeyValue = NULL)
+    public function __construct($entity, $map, $hasOneElement = FALSE)
     {
         $this->entity               = $entity;
         $this->map                  = $map;
@@ -66,27 +65,14 @@ class Collection
         $this->selectOrder          = array();
         $this->selectLimit          = NULL;
 
-        /* Special cases: collections with one element */
-        $this->hasOneElement    = $hasOneElement;
-        $this->primaryKeyValue  = $primaryKeyValue;
 
-        if ($this->hasOneElement && $primaryKeyValue !== NULL) {
-
-            if (!is_array($primaryKeyValue)) {
-                $primaryKeyValue = array($primaryKeyValue);
-            }
-
-            if (count($primaryKeyValue) != count($this->map['keys'])) {
-                trigger_error("specified key value does not match defined keys count");
-                return;
-            }
-
-            foreach ($this->map['keys'] as $index => $keyName) {
-                $this->where("$keyName = :keyValue", array('keyValue' => $primaryKeyValue[$index]));
-                $this->limit(1);
-            }
+        /* Set initial attributes: Key attributes are ALWAYS selected */
+        foreach ($this->map['keys'] as $keyAttributeName) {
+            $this->attr($keyAttributeName);
         }
 
+        /* Special cases: collections with one element */
+        $this->hasOneElement    = $hasOneElement;
     }
 
     public function getDB()
@@ -185,6 +171,20 @@ class Collection
         return $this;
     }
 
+    public function whereKey($keyValue)
+    {
+        if (!is_array($keyValue)) {
+            $keyValue = (array)$keyValue;
+        }
+
+        foreach ($this->map['keys'] as $index => $attributeName) {
+            if (!isset($keyValue[$index])) {
+                continue;
+            }
+            $this->where("$attributeName = :v", array('v' => $keyValue[$index]));
+        }
+    }
+
     public function equals($attributeName, $value)
     {
         if ( $value === NULL ) {
@@ -213,15 +213,21 @@ class Collection
     }
 
 
-    public function find()
+    public function find($primaryKeyValue = NULL)
     {
         $iterator = new Iterator($this);
 
         if ($this->hasOneElement) {
+            $this->limit(1);
+            if ($primaryKeyValue !== NULL) {
+                $this->whereKey($primaryKeyValue);
+            }
+
             $iterator = $iterator->first();
             if ($iterator === NULL) {
-                throw new Exception\EntityNotFound(get_called_class(), $this->primaryKeyValue);
+                throw new Exception\EntityNotFound(get_class($this->entity), implode(', ', (array)$primaryKeyValue));
             }
+
         }
 
         return $iterator;
@@ -257,28 +263,40 @@ class Collection
 
     public function toObject($row, $pointer, $resultSet)
     {
-        $returnClassName    = get_class($this->entity);
-        $returnObject       = new $returnClassName;
+        /* First, determine the object's ID */
+        $id = array();
+        foreach ($this->map['keys'] as $keyName) {
+            $keyFieldName = $this->alias.'_'.$keyName;
+            $id[$keyName] = $row[$keyFieldName]; //we can assume this value is set since the collection  ALWAYS includes the key attributes
+        }
 
+        /* Create the new Entity */
+        $returnClassName    = get_class($this->entity);
+        $returnObject       = new $returnClassName($id, FALSE);
+
+        /* Set all the attributes */
         foreach (array_keys($this->attributes) as $attributeName) {
             $returnObject->$attributeName = $row[$this->alias.'_'.$attributeName];
         }
 
-        /* Build restrictions */
-        $restrictions = array();
-        foreach ($this->map['keys'] as $keyName) {
-            $keyFieldName = $this->alias.'_'.$keyName;
-            $restrictions[] = array(
-                'column'    => $keyFieldName,
-                'value'     => $row[$keyFieldName]
-            );
+        /* Get all nested collections */
+        if ($this->nestedCollections) {
 
-            $returnObject->$keyName = $row[$keyFieldName];
-        }
+            /* Build conditions to determine which record in the resultset correspond to this entities nested objects (i.e. its "restrictions") */
+            $restrictions = array();
+            foreach ($this->map['keys'] as $keyName) {
+                $keyFieldName = $this->alias.'_'.$keyName;
 
-        foreach ( $this->nestedCollections as $attributeName => $nestedCollectionData ) {
-            $iterator = new Iterator($nestedCollectionData['foreignCollection'], $resultSet, $pointer, $restrictions);
-            $returnObject->$attributeName = $nestedCollectionData['foreignCollection']->hasOneElement ? $iterator->first() : $iterator;
+                $restrictions[] = array(
+                    'column'    => $keyFieldName,
+                    'value'     => $row[$keyFieldName]
+                );
+            }
+
+            foreach ($this->nestedCollections as $attributeName => $nestedCollectionData) {
+                $iterator = new Iterator($nestedCollectionData['foreignCollection'], $resultSet, $pointer, $restrictions);
+                $returnObject->$attributeName = $nestedCollectionData['foreignCollection']->hasOneElement ? $iterator->first() : $iterator;
+            }
         }
 
         return $returnObject;
@@ -313,21 +331,14 @@ class Collection
 
         $select->limit($this->selectLimit);
 
-
-        /* Always select primary keys */
-        foreach($this->map['keys'] as $keyName) {
-            $columnName = $this->map['attributes'][$keyName]['column'];
-            $select->field($this->alias.'_'.$columnName, "$this->alias.$columnName");
-        }
-
         /* Select collection attributes */
         foreach ($this->attributes as $attributeName => $attributeSource) {
 
             if ($attributeSource === NULL) {
-                $columnName = $this->map['attributes'][$attributeName]['column'];
-                $attributeSource = $this->alias.'.'.$columnName;
+                $columnName         = $this->map['attributes'][$attributeName]['column'];
+                $attributeSource    = $this->alias.'.'.$columnName;
             } else {
-                $attributeSource = $this->translate($attributeSource, $aliasMap);
+                $attributeSource    = $this->translate($attributeSource, $aliasMap);
             }
 
             $select->field($this->alias.'_'.$attributeName, $attributeSource);
@@ -441,9 +452,58 @@ class Collection
         return $this;
     }
 
-    public function save()
+    public function save($entity = NULL)
     {
-        return $this->unitOfWork === NULL ? NULL : $this->unitOfWork->save();
+        if ($entity === NULL) {
+            return $this->unitOfWork === NULL ? NULL : $this->unitOfWork->save();
+        }
+
+        /* Saving a single entity:
+         * Use this collection definition to determine
+         * which attributes and nested entities should be
+         * inserted or updated
+         */
+        $values = array();
+        foreach (array_keys($this->attributes) as $attributeName) {
+            $columnName = $this->map['attributes'][$attributeName]['column'];
+            if (isset($this->nestedCollections[$attributeName])) {
+
+                try {
+                    $values[$columnName] = isset($entity->$attributeName) ? $this->nestedCollections[$attributeName]['foreignCollection']->save($entity->$attributeName) : NULL;
+                } catch (\Phidias\DB\Exception\DuplicateKey $e) {
+                    $values[$columnName] = $e->getKey() == 'PRIMARY' ? $e->getEntry() : NULL;
+                }
+
+            } else {
+                $values[$columnName] = isset($entity->$attributeName) ? $entity->$attributeName : NULL;
+            }
+        }
+
+        $entityID = $entity->getID();
+        if ($entityID) {
+
+            $entityID       = (array)$entityID;
+            $idConditions   = array();
+            $idValues       = array();
+
+            foreach ($this->map['keys'] as $index => $attributeName) {
+                $columnName                 = $this->map['attributes'][$attributeName]['column'];
+                $idConditions[]             = "$columnName = :$attributeName";
+                $idValues[$attributeName]   = isset($entityID[$index]) ? $entityID[$index] : NULL;
+            }
+            $this->db->update($this->map['table'], $values, implode(' AND ', $idConditions), $idValues);
+
+        } else {
+            $this->db->insert($this->map['table'], $values);
+        }
+
+        $newID = array();
+        foreach ($this->map['keys'] as $attributeName) {
+            $newID[$attributeName] = isset($this->map['attributes'][$attributeName]['autoIncrement']) ? $this->db->getInsertID() : $entity->$attributeName;
+        }
+        $entity->setID($newID);
+
+        return array_pop($newID);
     }
 
     public function clear()
@@ -491,27 +551,25 @@ class Collection
         return $this->db->update($this->map['table'].' '.$this->alias, $this->updateValues, $updateCondition);
     }
 
-    public function delete($force = FALSE)
+    public function delete($entity = NULL)
     {
-        if (!$this->selectWhere && !$force) {
-            trigger_error("attempt to delete ignored because no conditions are defined.  If you wish to delete the entire collection invoke delete(TRUE)");
+        if ($entity !== NULL) {
+            $this->whereKey($entity->getID());
+        }
+
+        if (!$this->selectWhere) {
+            trigger_error("attempt to delete ignored because no conditions are defined.  If you wish to delete the entire collection use the conditional where(1)");
             return 0;
         }
 
-        if ($this->selectWhere) {
-            $aliasMap           = $this->buildAliasMap();
-            $deleteConditions   = array();
-            foreach($this->selectWhere as $where) {
-                $deleteConditions[] = $this->translate($where, $aliasMap);
-            }
-            $deleteCondition = implode(' AND ', $deleteConditions);
-
-            /* Since MySQL does not support "DELETE FROM table a WHERE a.some = thing" */
-            $deleteCondition = str_replace($this->alias.'.', '', $deleteCondition);
-
-        } else {
-            $deleteCondition = NULL;
+        $aliasMap           = $this->buildAliasMap();
+        $deleteConditions   = array();
+        foreach($this->selectWhere as $where) {
+            $deleteConditions[] = $this->translate($where, $aliasMap);
         }
+
+        /* Since MySQL does not support "DELETE FROM table a WHERE a.some = thing" */
+        $deleteCondition = str_replace($this->alias.'.', '', implode(' AND ', $deleteConditions));
 
         return $this->db->delete($this->map['table'], $deleteCondition);
     }

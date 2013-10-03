@@ -1,3 +1,232 @@
+Consider the following table:
+
+nouns
+-------------------------------------------------
+singular[PK]    plural      gender
+-------------------------------------------------
+perZona         perZonas    0
+hombre          hombres     1
+mujer           mujeres     0
+ .....
+
+
+Now suppose we want to fetch a record (1) and then update some values, including its primary key (2)
+
+1: Fetch the record
+
+$noun = new Noun('perZona');
+
+Should result in the query:
+SELECT * FROM nouns WHERE singular = 'perZona';
+
+
+2: Update its primary key
+
+$noun->singular = persona;
+$noun->plural   = personas;
+$noun->update();
+
+should result in the query:
+UPDATE nouns SET singular = 'persona', plural = 'personas' WHERE singular = 'perZona'
+
+
+There is a clear implication that the original primary key value (perZona) is stored
+somewhere in the Entity object.  We will refer to this as the entity's "identification" (or "id").
+Since an entity may have multiple primary keys, its id will be an ARRAY.
+
+
+
+When fetching we ALWAYS want to specify the attributes (as to discourage "SELECT *").
+1. How do we specify select attributes when fetching a single object ?
+2. Consider, also, that if said attribute is a related entity we must also specify the selectable attributes for it
+
+Let's see...  one option could be
+
+$period = Period_Entity::single()
+            ->attr('foo')
+            ->attr('type', Period_Type_Entity::single()
+                ->allAttributes()
+                ->attr('name', Noun_Entity::single()->allAttributes())
+            )
+            ->find();
+
+Another one could be ....
+
+$period = new Period_Entity;
+$period->attr('foo');
+$period->type = new Period_Type_Entity;
+$period->type->allAttributes();
+$period->type->name = new Noun_Entity();
+$period->type->name->allAttributes();
+
+... but it's not as clear, simple or compact.
+
+Let's stick with the first options:
+
+$collection = Period_Entity::single($ID)
+            ->attr('foo')
+            ->attr('type', Period_Type_Entity::single()
+                ->allAttributes()
+                ->attr('name', Noun_Entity::single()->allAttributes())
+            );
+
+$period = $collection->find();
+
+
+and updating could be done:
+
+$period->id = 'new id';
+$period->type->name = 'new name';
+
+$collection->add($period);
+$collection->save();
+
+nouns
+-------------------------------------------------
+singular[PK]    plural      gender
+-------------------------------------------------
+perZona         perZonas    0
+hombre          hombres     1
+mujer           mujeres     0
+
+
+
+$noun           = new Noun_Entity()
+                    ->attr()
+                    ->attr()
+                    ->get('perZona');       //SELECT * FROM nouns WHERE singular = 'perZona';
+
+
+$noun->singular = 'nuevo valor';
+$noun->save();
+
+//UPDATE noun SET singular = 'nuevo valor' WHERE singular = 'perZona';
+
+
+
+$types = Period_Type_Entity::collection()
+            ->attr('id')
+            ->attr('name', Noun::single()
+                ->allAttributes()
+            )
+            ->find();
+
+
+
+
+$noun = Noun_Entity::single()
+        ->attr('singular')
+        ->attr('plural')
+        ->get('perZona');
+
+$noun = Noun_Entity::single('perZona')
+        ->attr('singular')
+        ->attr('plural')
+        ->find();
+
+
+
+$type = Period_Type_Entity::single()
+        ->attr('description')
+        ->attr('name', Noun_Entity::single()
+            ->allAttributes()
+        )
+        ->find(5);
+
+$type->description      = 'nueva descripcion';
+$type->name->singular   = 'otra cosa';
+$type->save();
+
+
+
+$type = Period_Type_Entity::single()
+        ->attr('description')
+        ->attr('name', Noun_Entity::single()
+            ->allAttributes()
+        )
+        ->find(5);
+
+
+$collection = Period_Type_Entity::single()
+        ->attr('description')
+        ->attr('name', Noun_Entity::single()
+            ->allAttributes()
+        );
+
+
+$periodo = $collection->find(7);
+//$periodo = new Period_Entity(7);
+
+$periodo->asdasdasdsasds.....
+$collection->save($periodo);
+
+
+
+
+
+$nuevoElement = new Period_Type_Entity;
+$nuevoElement->description = 'hola';
+
+$nuevoElement->name = new Noun;
+$nuevoElement->name->singular = 'ciclo';
+$nuevoElement->name->plural = 'ciclos';
+$nuevoElement->name->gender = 0;
+
+$collection->save($nuevoElement);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+GET /noun/perZona
+
+reponda:
+{
+    singular: 'asdasds',
+    plural: '.....'
+}
+
+404
+{
+    error: 'perZOna no existe'
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Result set:
 
 people0_id 	people0_firstName 	people0_lastName 	people0_birthDay 	people0_age 	people0_foo 	people_data0_email 	people_data0_mobile 	people_data0_concatenado 	people_data0_id
