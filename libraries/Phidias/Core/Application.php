@@ -1,7 +1,6 @@
 <?php
 namespace Phidias\Core;
 
-use Phidias\Component\ExceptionHandler;
 use Phidias\Component\HTTP\Request;
 
 /* Possible exceptions */

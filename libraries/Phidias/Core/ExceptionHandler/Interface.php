@@ -1,5 +1,5 @@
 <?php
-namespace Phidias\Component;
+namespace Phidias\Core;
 
 interface ExceptionHandler_Interface
 {

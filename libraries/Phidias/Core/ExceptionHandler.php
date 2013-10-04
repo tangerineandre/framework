@@ -1,13 +1,5 @@
 <?php
-namespace Phidias\Component;
-
-use Phidias\Core\Environment;
-use Phidias\Core\Application;
-use Phidias\Core\Configuration;
-use Phidias\Core\Route;
-use Phidias\Core\View;
-use Phidias\Core\Layout;
-use Phidias\Core\Debug;
+namespace Phidias\Core;
 
 class ExceptionHandler implements ExceptionHandler_Interface
 {

@@ -110,12 +110,13 @@ class Debug
 
     public static function dump($var, $returnOutput = FALSE)
     {
-        $output = '<pre>'.htmlentities(print_r($var,1)).'</pre>';
+        $varData = print_r($var, TRUE);
+
         if ($returnOutput) {
-            return $output;
+            return $varData;
         }
 
-        echo $output;
+        echo '<pre>'.htmlentities($varData).'</pre>';
     }
 
     public static function dumpx($var)

@@ -1,0 +1,4 @@
+{
+    error: '<?=$exception->getMessage()?>',
+    code: '<?=$exception->getCode()?>'
+}

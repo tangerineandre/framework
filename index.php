@@ -28,6 +28,6 @@ Environment::finalize();
 
 
 /* Global functions */
-function dump($var, $returnOutput = FALSE) { Phidias\Core\Debug::dump($var, $returnOutput); }
-function dumpx($var) { Phidias\Core\Debug::dumpx($var); }
+function dump($var, $returnOutput = FALSE) { return Phidias\Core\Debug::dump($var, $returnOutput); }
+function dumpx($var) { return Phidias\Core\Debug::dumpx($var); }
 function say($word) { return Phidias\Core\Language::get($word); }
