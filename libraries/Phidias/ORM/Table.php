@@ -14,9 +14,9 @@ class Table
     public function __construct($map)
     {
         $this->map      = $map;
-        $this->table    = new \Phidias\DB\Table($map['table']);
+        $this->table    = new \Phidias\DB\Table($this->map->getTable());
 
-        foreach ($map['attributes'] as $attributeData) {
+        foreach ($this->map->getAttributes() as $attributeData) {
 
             $columnData         = $attributeData;
             $columnData['name'] = $attributeData['column'];
@@ -24,27 +24,27 @@ class Table
             if (isset($attributeData['entity'])) {
                 $foreignMap = $attributeData['entity']::getMap();
 
-                if (!isset($foreignMap['attributes'][$attributeData['attribute']])) {
+                if (!$foreignMap->hasAttribute($attributeData['attribute'])) {
                     trigger_error("related attribute '{$attributeData['attribute']}' not found in entity '{$attributeData['entity']}'", E_USER_ERROR);
                 }
 
-                $columnData = array_merge($columnData, $foreignMap['attributes'][$attributeData['attribute']]);
+                $columnData = array_merge($columnData, $foreignMap->getAttribute($attributeData['attribute']));
                 unset($columnData['autoIncrement']);
             }
 
             $this->table->addColumn($columnData);
         }
 
-        $this->table->setPrimaryKey($map['keys']);
+        $this->table->setPrimaryKey($this->map->getKeys());
 
 
         /* Avoid recurson on self-referencing instances */
-        if (isset(self::$lock[$map['table']])) {
+        if (isset(self::$lock[$this->map->getTable()])) {
             return;
         }
-        self::$lock[$map['table']] = TRUE;
+        self::$lock[$this->map->getTable()] = TRUE;
 
-        foreach($map['relations'] as $relationData) {
+        foreach($this->map->getRelations() as $relationData) {
 
             $relatedEntity  = new $relationData['entity'];
             $onDelete       = isset($relationData['onDelete']) ? $relationData['onDelete'] : NULL;
@@ -53,13 +53,13 @@ class Table
             $this->table->setForeignKey($relationData['column'], $relatedEntity::table()->getDbTable(), $relationData['attribute'], $onDelete, $onUpdate);
         }
 
-        unset(self::$lock[$map['table']]);
+        unset(self::$lock[$this->map->getTable()]);
     }
 
     private function getDB()
     {
         if ($this->db === NULL) {
-            $this->db = DB::connect(isset($this->map['db']) ? $this->map['db'] : NULL);
+            $this->db = DB::connect($this->map->getDB());
         }
 
         return $this->db;

@@ -29,7 +29,7 @@ class Iterator implements \Iterator
 
         $map    = $this->collection->getMap();
         $alias  = $this->collection->getAlias();
-        foreach ($map['keys'] as $keyName) {
+        foreach ($map->getKeys() as $keyName) {
             $this->keyAttributes[] = $alias.'_'.$keyName;
         }
 

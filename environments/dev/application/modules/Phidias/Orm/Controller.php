@@ -21,10 +21,8 @@ class Phidias_Orm_Controller extends Controller
             $map    = $object->getMap();
 
             $relations = array();
-            if (isset($map['relations'])) {
-                foreach ($map['relations'] as $relationData) {
-                    $relations[] = $relationData['entity'];
-                }
+            foreach ($map->getRelations() as $relationData) {
+                $relations[] = $relationData['entity'];
             }
 
             $retval[$classname] = array(

@@ -11,8 +11,7 @@ namespace Phidias\ORM\Entity;
  */
 class Map
 {
-    private $readDB;
-    private $writeDB;
+    private $db;
 
     private $table;
     private $keys;
@@ -32,6 +31,63 @@ class Map
             $this->fromArray($mapData);
         }
     }
+
+    public function getTable()
+    {
+        return $this->table;
+    }
+
+    public function getDB()
+    {
+        return $this->db;
+    }
+
+    public function getKeys()
+    {
+        return $this->keys;
+    }
+
+    public function hasAttribute($attributeName)
+    {
+        return isset($this->attributes[$attributeName]);
+    }
+
+    public function getAttributes()
+    {
+        return $this->attributes;
+    }
+
+    public function getAttribute($attributeName)
+    {
+        return $this->attributes[$attributeName];
+    }
+
+    public function getColumn($attributeName)
+    {
+        return isset($this->attributes[$attributeName]) ? $this->attributes[$attributeName]['column'] : NULL;
+    }
+
+    public function isAutoIncrement($attributeName)
+    {
+        return isset($this->attributes[$attributeName]['autoIncrement']) ? $this->attributes[$attributeName]['autoIncrement'] : FALSE;
+    }
+
+
+    public function hasRelation($relationName)
+    {
+        return isset($this->relations[$relationName]);
+    }
+
+    public function getRelation($relationName)
+    {
+        return $this->hasRelation($relationName) ? $this->relations[$relationName] : NULL;
+    }
+
+    public function getRelations()
+    {
+        return $this->relations;
+    }
+
 
     private function fromArray($array)
     {
@@ -71,55 +127,15 @@ class Map
         }
 
         if (isset($array['db'])) {
-            $this->readDB   = $array['db'];
-            $this->writeDB  = $array['db'];
+            $this->db = $array['db'];
         }
+
+        if (isset($array['table'])) {
+            $this->table = $array['table'];
+        }
+
+        $this->keys = isset($array['keys']) ? $array['keys'] : array();
 
     }
 
-
-    /* Temporarily */
-    public static function sanitize($map)
-    {
-        if (!isset($map['attributes'])) {
-            trigger_error('invalid map: no attributes defined', E_USER_ERROR);
-        }
-
-        if (!isset($map['keys'])) {
-            trigger_error('invalid map: no keys defined', E_USER_ERROR);
-        }
-
-        foreach ($map['keys'] as $keyName) {
-            if (!isset($map['attributes'][$keyName])) {
-                trigger_error("invalid map: key '$keyName' is not defined as attribute", E_USER_ERROR);
-            }
-        }
-
-        $map['relations'] = array();
-
-        foreach ($map['attributes'] as $attributeName => &$attributeData) {
-            if (!isset($attributeData['column'])) {
-                $attributeData['column'] = $attributeName;
-            }
-
-            if (isset($attributeData['entity'])) {
-
-                if (!class_exists($attributeData['entity'])) {
-                    trigger_error("invalid map: related entity '{$attributeData['entity']}' not found", E_USER_ERROR);
-                }
-
-                if (!isset($attributeData['attribute'])) {
-                    trigger_error("invalid map: no attribute specified for relation '$attributeName'", E_USER_ERROR);
-                }
-
-                $map['relations'][$attributeName] = $attributeData;
-            }
-        }
-
-        if (!isset($map['db'])) {
-            $map['db'] = NULL;
-        }
-
-        return $map;
-    }
 }

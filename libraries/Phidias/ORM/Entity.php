@@ -30,7 +30,7 @@ class Entity
 
         $idValue    = (array)$_id;
         $map        = self::getMap();
-        foreach ($map['keys'] as $index => $attributeName) {
+        foreach ($map->getKeys() as $index => $attributeName) {
             $this->$attributeName = isset($idValue[$index]) ? $idValue[$index] : NULL;
         }
 
@@ -40,7 +40,7 @@ class Entity
     public static function getMap()
     {
         $className = get_called_class();
-        return Entity\Map::sanitize($className::$map);
+        return new Entity\Map($className::$map);
     }
 
     public static function collection()
@@ -66,7 +66,7 @@ class Entity
 
         foreach ($values as $key => $value) {
 
-            if (!isset($map['attributes'][$key])) {
+            if (!$map->hasAttribute($key)) {
                 continue;
             }
 
@@ -90,9 +90,23 @@ class Entity
 
 
     /* Shorthand methods */
+    private function getCollection()
+    {
+        $map = self::getMap();
+        $collection = self::single()->allAttributes();
+
+        foreach (array_keys($map->getRelations()) as $attributeName) {
+            if (isset($this->$attributeName) && $this->$attributeName instanceof Entity) {
+                $collection->attr($attributeName, $this->$attributeName->getCollection());
+            }
+        }
+
+        return $collection;
+    }
+
     public function save()
     {
-        return self::single()->allAttributes()->save($this);
+        return $this->getCollection()->save($this);
     }
 
     public function delete()

@@ -28,7 +28,8 @@ class Collection
     private $customAttributes;
 
     private $alias;
-    private $db;
+    private $readDB;
+    private $writeDB;
     private $resultSet;
 
     private $selectWhere;
@@ -55,24 +56,23 @@ class Collection
         $this->customAttributes     = array();
 
         /* Allocate a unique alias */
-        $this->alias = $this->map['table'].self::$nextAlias++;
+        $this->alias = $this->map->getTable().self::$nextAlias++;
 
         /* Connect to the DB */
-        $this->db = DB::connect($this->map['db']);
+        $this->db   = DB::connect($this->map->getDB());
 
         /* Select options */
         $this->selectWhere          = array();
         $this->selectOrder          = array();
         $this->selectLimit          = NULL;
 
-
         /* Set initial attributes: Key attributes are ALWAYS selected */
-        foreach ($this->map['keys'] as $keyAttributeName) {
+        foreach ($this->map->getKeys() as $keyAttributeName) {
             $this->attr($keyAttributeName);
         }
 
         /* Special cases: collections with one element */
-        $this->hasOneElement    = $hasOneElement;
+        $this->hasOneElement = $hasOneElement;
     }
 
     public function getDB()
@@ -113,17 +113,18 @@ class Collection
             /* Determine the relation for nesting */
             $nestingRelationName    = isset($nestedCollection->nestingRelation) ? $nestedCollection->nestingRelation : $attributeName;
             $nestedMap              = $nestedCollection->map;
-            $localMap               = $this->map;
 
-            if ( isset($localMap['relations'][$nestingRelationName]) ) {
+            if ( $this->map->hasRelation($nestingRelationName) ) {
 
-                $localColumn    = $localMap['relations'][$nestingRelationName]['column'];
-                $foreignColumn  = $localMap['relations'][$nestingRelationName]['attribute'];
+                $relationData   = $this->map->getRelation($nestingRelationName);
+                $localColumn    = $relationData['column'];
+                $foreignColumn  = $relationData['attribute'];
 
-            } elseif ( isset($nestedMap['relations'][$nestingRelationName]) ) {
+            } elseif ( $nestedMap->hasRelation($nestingRelationName) ) {
 
-                $localColumn    = $nestedMap['relations'][$nestingRelationName]['attribute'];
-                $foreignColumn  = $nestedMap['relations'][$nestingRelationName]['column'];
+                $relationData   = $nestedMap->getRelation($nestingRelationName);
+                $localColumn    = $relationData['attribute'];
+                $foreignColumn  = $relationData['column'];
 
             } else {
                 trigger_error("Relation '$nestingRelationName' not found.  Specify the related attribute with collection::relatedWith", E_USER_ERROR);
@@ -152,7 +153,7 @@ class Collection
 
     public function allAttributes()
     {
-        foreach ($this->map['attributes'] as $attributeName => $attributeData) {
+        foreach (array_keys($this->map->getAttributes()) as $attributeName) {
             $this->attr($attributeName);
         }
 
@@ -173,11 +174,9 @@ class Collection
 
     public function whereKey($keyValue)
     {
-        if (!is_array($keyValue)) {
-            $keyValue = (array)$keyValue;
-        }
+        $keyValue = (array)$keyValue;
 
-        foreach ($this->map['keys'] as $index => $attributeName) {
+        foreach ($this->map->getKeys() as $index => $attributeName) {
             if (!isset($keyValue[$index])) {
                 continue;
             }
@@ -265,7 +264,7 @@ class Collection
     {
         /* First, determine the object's ID */
         $id = array();
-        foreach ($this->map['keys'] as $keyName) {
+        foreach ($this->map->getKeys() as $keyName) {
             $keyFieldName = $this->alias.'_'.$keyName;
             $id[] = $row[$keyFieldName]; //we can assume this value is set since the collection  ALWAYS includes the key attributes
         }
@@ -284,7 +283,7 @@ class Collection
 
             /* Build conditions to determine which record in the resultset correspond to this entities nested objects (i.e. its "restrictions") */
             $restrictions = array();
-            foreach ($this->map['keys'] as $keyName) {
+            foreach ($this->map->getKeys() as $keyName) {
                 $keyFieldName = $this->alias.'_'.$keyName;
 
                 $restrictions[] = array(
@@ -317,7 +316,7 @@ class Collection
             $aliasMap = $this->buildAliasMap();
         }
 
-        $select = new Select($this->map['table'], $this->alias);
+        $select = new Select($this->map->getTable(), $this->alias);
 
 
         /* Defined options */
@@ -335,7 +334,7 @@ class Collection
         foreach ($this->attributes as $attributeName => $attributeSource) {
 
             if ($attributeSource === NULL) {
-                $columnName         = $this->map['attributes'][$attributeName]['column'];
+                $columnName         = $this->map->getColumn($attributeName);
                 $attributeSource    = $this->alias.'.'.$columnName;
             } else {
                 $attributeSource    = $this->translate($attributeSource, $aliasMap);
@@ -348,7 +347,6 @@ class Collection
         foreach($this->nestedCollections as $attributeName => $nestedCollectionData) {
 
             $nestedCollection   = $nestedCollectionData['foreignCollection'];
-            $nestedMap          = $nestedCollection->map;
             $nestedSelect       = $nestedCollection->buildSelect($aliasMap);
 
             $joinConditions = array();
@@ -357,7 +355,7 @@ class Collection
             }
             $joinCondition = $joinConditions ? implode(' AND ', $joinConditions) : NULL;
 
-            $select->leftJoin($nestedMap['table'], $nestedCollection->alias, $nestedCollectionData['foreignColumn'], $nestedCollectionData['localColumn'], $joinCondition);
+            $select->leftJoin($nestedCollection->map->getTable(), $nestedCollection->alias, $nestedCollectionData['foreignColumn'], $nestedCollectionData['localColumn'], $joinCondition);
 
             $select->merge($nestedSelect);
 
@@ -418,7 +416,7 @@ class Collection
             $nestedCollection['foreignCollection']->buildAliasMap("$identifier.$attributeName", $retval);
         }
 
-        foreach ($this->map['attributes'] as $attributeName => $attributeData) {
+        foreach ($this->map->getAttributes() as $attributeName => $attributeData) {
             $retval["$identifier.$attributeName"] = $this->alias.'.`'.$attributeData['column'].'`';
         }
 
@@ -465,7 +463,7 @@ class Collection
          */
         $values = array();
         foreach (array_keys($this->attributes) as $attributeName) {
-            $columnName = $this->map['attributes'][$attributeName]['column'];
+            $columnName = $this->map->getColumn($attributeName);
             if (isset($this->nestedCollections[$attributeName])) {
 
                 try {
@@ -486,20 +484,20 @@ class Collection
             $idConditions   = array();
             $idValues       = array();
 
-            foreach ($this->map['keys'] as $index => $attributeName) {
-                $columnName                 = $this->map['attributes'][$attributeName]['column'];
+            foreach ($this->map->getKeys() as $index => $attributeName) {
+                $columnName                 = $this->map->getColumn($attributeName);
                 $idConditions[]             = "$columnName = :$attributeName";
                 $idValues[$attributeName]   = isset($entityID[$index]) ? $entityID[$index] : NULL;
             }
-            $this->db->update($this->map['table'], $values, implode(' AND ', $idConditions), $idValues);
+            $this->db->update($this->map->getTable(), $values, implode(' AND ', $idConditions), $idValues);
 
         } else {
-            $this->db->insert($this->map['table'], $values);
+            $this->db->insert($this->map->getTable(), $values);
         }
 
         $newID = array();
-        foreach ($this->map['keys'] as $attributeName) {
-            $newID[] = isset($this->map['attributes'][$attributeName]['autoIncrement']) ? $this->db->getInsertID() : $entity->$attributeName;
+        foreach ($this->map->getKeys() as $attributeName) {
+            $newID[] = $this->map->isAutoIncrement($attributeName) ? $this->db->getInsertID() : $entity->$attributeName;
         }
         $entity->setID($newID);
 
@@ -521,11 +519,11 @@ class Collection
             return $this;
         }
 
-        if (!isset($this->map['attributes'][$attributeName])) {
+        if (!$this->map->hasAttribute($attributeName)) {
             return $this;
         }
 
-        $this->updateValues[$this->map['attributes'][$attributeName]['column']] = $value;
+        $this->updateValues[$this->map->getColumn($attributeName)] = $value;
 
         return $this;
     }
@@ -548,7 +546,7 @@ class Collection
             $updateCondition = NULL;
         }
 
-        return $this->db->update($this->map['table'].' '.$this->alias, $this->updateValues, $updateCondition);
+        return $this->db->update($this->map->getTable().' '.$this->alias, $this->updateValues, $updateCondition);
     }
 
     public function delete($entity = NULL)
@@ -571,7 +569,7 @@ class Collection
         /* Since MySQL does not support "DELETE FROM table a WHERE a.some = thing" */
         $deleteCondition = str_replace($this->alias.'.', '', implode(' AND ', $deleteConditions));
 
-        return $this->db->delete($this->map['table'], $deleteCondition);
+        return $this->db->delete($this->map->getTable(), $deleteCondition);
     }
 
     public function getInsertID()
