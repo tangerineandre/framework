@@ -64,17 +64,26 @@ class Entity
     {
         $map = self::getMap();
 
-        foreach ($values as $key => $value) {
+        foreach ($values as $attribute => $value) {
 
-            if (!$map->hasAttribute($key)) {
+            if (!$map->hasAttribute($attribute)) {
                 continue;
             }
 
-            if (isset($this->$key) && ($this->$key instanceof Entity)) {
-                $this->$key->setValues($value);
-            } else {
-                $this->$key = $value;
+            if ($value === NULL) {
+                continue;
             }
+
+            if ($map->hasRelation($attribute) && is_array($value)) {
+                if (!($this->$attribute instanceof Entity)) {
+                    $relationData = $map->getRelation($attribute);
+                    $this->$attribute = new $relationData['entity'];
+                }
+                $this->$attribute->setValues($value);
+            } else {
+                $this->$attribute = $value;
+            }
+
         }
     }
 
