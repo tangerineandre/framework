@@ -1,4 +1,1 @@
-{
-    error: '<?=$exception->getMessage()?>',
-    code: '<?=$exception->getCode()?>'
-}
+<?=json_encode( array('error' => $exception->getMessage(), 'code'  => $exception->getCode(), 'type' => get_class($exception)) )?>

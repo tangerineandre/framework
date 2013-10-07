@@ -60,8 +60,12 @@ class Entity
         return new Table(self::getMap());
     }
 
-    public function setValues(array $values)
+    public function setValues($values)
     {
+        if (!is_array($values)) {
+            return;
+        }
+
         $map = self::getMap();
 
         foreach ($values as $attribute => $value) {
