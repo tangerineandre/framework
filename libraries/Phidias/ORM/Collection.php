@@ -28,8 +28,7 @@ class Collection
     private $customAttributes;
 
     private $alias;
-    private $readDB;
-    private $writeDB;
+    private $db;
     private $resultSet;
 
     private $selectWhere;
@@ -174,13 +173,14 @@ class Collection
 
     public function whereKey($keyValue)
     {
-        $keyValue = (array)$keyValue;
+        $keyValue           = (array)$keyValue;
+        $collectionAlias    = get_class($this->entity);
 
         foreach ($this->map->getKeys() as $index => $attributeName) {
             if (!isset($keyValue[$index])) {
                 continue;
             }
-            $this->where("$attributeName = :v", array('v' => $keyValue[$index]));
+            $this->where("$collectionAlias.$attributeName = :v", array('v' => $keyValue[$index]));
         }
     }
 
@@ -218,6 +218,7 @@ class Collection
 
         if ($this->hasOneElement) {
             $this->limit(1);
+
             if ($primaryKeyValue !== NULL) {
                 $this->whereKey($primaryKeyValue);
             }
