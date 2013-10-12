@@ -507,7 +507,11 @@ class Collection
 
         $newID = array();
         foreach ($this->map->getKeys() as $attributeName) {
-            $newID[] = $this->map->isAutoIncrement($attributeName) ? $this->db->getInsertID() : $entity->$attributeName;
+            if (isset($entity->$attributeName)) {
+                $newID[] = $entity->$attributeName;
+            } else {
+                $newID[] = $this->db->getInsertID();
+            }
         }
         $entity->setID($newID);
 
