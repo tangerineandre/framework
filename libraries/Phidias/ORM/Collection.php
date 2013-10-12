@@ -150,6 +150,15 @@ class Collection
         return $this;
     }
 
+    public function attrs()
+    {
+        foreach (func_get_args() as $attr) {
+            $this->attr($attr);
+        }
+
+        return $this;
+    }
+
     public function allAttributes()
     {
         foreach (array_keys($this->map->getAttributes()) as $attributeName) {
