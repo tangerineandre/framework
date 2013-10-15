@@ -13,6 +13,7 @@ class Collection
     private $attributes;    //Selected attributes
     private $nestedCollections;
     private $nestingRelation;
+    private $innerNesting;
 
     /*
      * Suppose the following scenario:
@@ -51,6 +52,7 @@ class Collection
         $this->attributes           = array();
         $this->nestedCollections    = array();
         $this->nestingRelation      = NULL;
+        $this->innerNesting         = FALSE;
 
         $this->customAttributes     = array();
 
@@ -102,6 +104,12 @@ class Collection
         return $this;
     }
 
+    public function notEmpty()
+    {
+        $this->innerNesting = TRUE;
+        return $this;
+    }
+
 
     public function attr($attributeName, $attributeSource = NULL, $parameters = NULL)
     {
@@ -126,13 +134,23 @@ class Collection
                 $foreignColumn  = $relationData['column'];
 
             } else {
-                trigger_error("Relation '$nestingRelationName' not found.  Specify the related attribute with collection::relatedWith", E_USER_ERROR);
+
+                $foreignRelations = $nestedMap->getRelations($this->entity);
+
+                if (!count($foreignRelations)) {
+                    trigger_error("Relation '$nestingRelationName' not found.  Specify the related attribute with collection::relatedWith", E_USER_ERROR);
+                }
+
+                /* Use the first found relation relating the foreign entity to this one */
+                $relationData = array_pop($foreignRelations);
+                $localColumn    = $relationData['attribute'];
+                $foreignColumn  = $relationData['column'];
             }
 
             $this->nestedCollections[$attributeName] = array(
                 'foreignCollection' => $nestedCollection,
                 'foreignColumn'     => $foreignColumn,
-                'localColumn'       => $localColumn,
+                'localColumn'       => $localColumn
             );
 
             return $this;
@@ -195,6 +213,8 @@ class Collection
 
     public function equals($attributeName, $value)
     {
+        $attributeName = "`$attributeName`";
+
         if ( $value === NULL ) {
             $this->selectWhere[] = $attributeName.' IS NULL';
         } else {
@@ -365,7 +385,7 @@ class Collection
             }
             $joinCondition = $joinConditions ? implode(' AND ', $joinConditions) : NULL;
 
-            $select->leftJoin($nestedCollection->map->getTable(), $nestedCollection->alias, $nestedCollectionData['foreignColumn'], $nestedCollectionData['localColumn'], $joinCondition);
+            $select->join($nestedCollection->innerNesting ? 'INNER' : 'LEFT', $nestedCollection->map->getTable(), $nestedCollection->alias, $nestedCollectionData['foreignColumn'], $nestedCollectionData['localColumn'], $joinCondition);
 
             $select->merge($nestedSelect);
 

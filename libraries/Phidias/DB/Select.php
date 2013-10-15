@@ -72,6 +72,21 @@ class Select
         return $this;
     }
 
+    public function join($type, $foreignTable, $foreignTableAlias, $foreignColumn, $localColumn, $joinCondition = NULL)
+    {
+        $this->_joins[] = array(
+            'type'              => $type,
+            'foreignTable'      => $foreignTable,
+            'foreignTableAlias' => $foreignTableAlias,
+            'foreignColumn'     => $foreignColumn,
+            'localTableAlias'   => $this->_tableAlias,
+            'localColumn'       => $localColumn,
+            'joinCondition'     => $joinCondition
+        );
+
+        return $this;
+    }
+
     public function leftJoin($foreignTable, $foreignTableAlias, $foreignColumn, $localColumn, $joinCondition = NULL)
     {
         $this->_joins[] = array(

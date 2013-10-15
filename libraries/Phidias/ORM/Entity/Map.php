@@ -83,9 +83,21 @@ class Map
         return $this->hasRelation($relationName) ? $this->relations[$relationName] : NULL;
     }
 
-    public function getRelations()
+    public function getRelations($entity = NULL)
     {
-        return $this->relations;
+        if ($entity === NULL) {
+            return $this->relations;
+        }
+
+        $className = get_class($entity);
+
+        $retval = array();
+        foreach ($this->relations as $relationName => $relationData) {
+            if ($relationData['entity'] == $className) {
+                $retval[$relationName] = $relationData;
+            }
+        }
+        return $retval;
     }
 
 
