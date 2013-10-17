@@ -124,6 +124,7 @@ class Select
     {
         $this->_fields  = array_merge($this->_fields, $select->_fields);
         $this->_joins   = array_merge($this->_joins, $select->_joins);
+        $this->_orders  = array_merge($this->_orders, $select->_orders);
     }
 
     public function toSQL()

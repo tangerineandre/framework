@@ -126,20 +126,29 @@ class Iterator implements \Iterator
 
     public function fetchAll()
     {
+        $nested = array_keys($this->collection->getNestedCollections());
+
         $retval = array();
         foreach ($this as $object) {
+
+            foreach ($nested as $attributeName) {
+                if (isset($object->$attributeName) && is_a($object->$attributeName, 'Iterator')) {
+                    $object->$attributeName = $object->$attributeName->fetchAll();
+                }
+            }
+
             $retval[] = $object;
         }
         return $retval;
     }
 
+    public function toArray()
+    {
+        return (array)$this->fetchAll();
+    }
+
     public function toJSON()
     {
-        $retval = array();
-        foreach ($this as $object) {
-            $retval[] = $object->toJSON();
-        }
-
-        return '['.implode(',', $retval).']';
+        return json_encode($this->fetchAll());
     }
 }

@@ -142,10 +142,13 @@ class Collection
                 }
 
                 /* Use the first found relation relating the foreign entity to this one */
-                $relationData = array_pop($foreignRelations);
+                $relationData   = array_pop($foreignRelations);
                 $localColumn    = $relationData['attribute'];
                 $foreignColumn  = $relationData['column'];
+
             }
+
+            array_unshift($nestedCollection->selectOrder, $nestedCollection->alias.'.'.$foreignColumn);
 
             $this->nestedCollections[$attributeName] = array(
                 'foreignCollection' => $nestedCollection,
@@ -368,6 +371,12 @@ class Collection
             $select->where($this->translate($condition, $aliasMap));
         }
 
+        if (!$this->selectOrder) {
+            foreach ($this->map->getKeys() as $keyName) {
+                $this->orderBy($this->alias.'.'.$keyName);
+            }
+        }
+
         foreach ($this->selectOrder as $order) {
             $select->orderBy($this->translate($order, $aliasMap));
         }
@@ -403,9 +412,6 @@ class Collection
 
             $select->merge($nestedSelect);
 
-            foreach ($nestedCollection->selectOrder as $order) {
-                $select->orderBy($this->translate($order, $aliasMap));
-            }
         }
 
 
