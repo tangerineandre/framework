@@ -240,6 +240,20 @@ class Collection
         return $this;
     }
 
+    public function like($attribute, $query)
+    {
+        $words = explode(' ', trim($query));
+        foreach ($words as $word) {
+            if (!$word = trim($word)) {
+                continue;
+            }
+            $word = str_replace('%', '\%', $word);
+            $this->where("$attribute LIKE :word", array('word' => "%$word%"));
+        }
+
+        return $this;
+    }
+
 
     public function find($primaryKeyValue = NULL)
     {
