@@ -365,8 +365,6 @@ class Collection
 
         $select = new Select($this->map->getTable(), $this->alias);
 
-
-        /* Defined options */
         foreach ($this->selectWhere as $condition) {
             $select->where($this->translate($condition, $aliasMap));
         }
@@ -399,18 +397,15 @@ class Collection
         /* Join with nested collections */
         foreach($this->nestedCollections as $attributeName => $nestedCollectionData) {
 
-            $nestedCollection   = $nestedCollectionData['foreignCollection'];
-            $nestedSelect       = $nestedCollection->buildSelect($aliasMap);
+            $nestedCollection = $nestedCollectionData['foreignCollection'];
 
-            $joinConditions = array();
+            $joinConditions = array($nestedCollection->alias.'.'.$nestedCollectionData['foreignColumn']. ' = '.$this->alias.'.'.$nestedCollectionData['localColumn']);
             foreach ($nestedCollection->selectWhere as $condition) {
                 $joinConditions[] = $this->translate($condition, $aliasMap);
             }
-            $joinCondition = $joinConditions ? implode(' AND ', $joinConditions) : NULL;
+            $nestedCollection->selectWhere = array();
 
-            $select->join($nestedCollection->innerNesting ? 'INNER' : 'LEFT', $nestedCollection->map->getTable(), $nestedCollection->alias, $nestedCollectionData['foreignColumn'], $nestedCollectionData['localColumn'], $joinCondition);
-
-            $select->merge($nestedSelect);
+            $select->join($nestedCollection->innerNesting ? 'INNER' : 'LEFT', $nestedCollection->buildSelect($aliasMap), $joinConditions);
 
         }
 

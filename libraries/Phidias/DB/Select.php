@@ -26,14 +26,16 @@ namespace Phidias\DB;
  */
 class Select
 {
-    private $_table;
-    private $_tableAlias;
+    private $table;
+    private $alias;
 
-    private $_fields;
-    private $_conditions;
-    private $_joins;
-    private $_orders;
-    private $_limit;
+    private $fields;
+    private $conditions;
+    private $joins;
+    private $joinData;
+    private $orderBy;
+    private $limit;
+    private $groupBy;
 
     public function __construct($table, $alias = NULL)
     {
@@ -41,62 +43,46 @@ class Select
             $alias = $table;
         }
 
-        $this->_table       = $table;
-        $this->_tableAlias  = $alias;
+        $this->table        = $table;
+        $this->alias        = $alias;
 
-        $this->_fields      = array();
-        $this->_conditions  = array();
-        $this->_joins       = array();
-        $this->_orders      = array();
+        $this->fields       = array();
+        $this->conditions   = array();
+        $this->joins        = array();
+        $this->joinData     = array();
+        $this->orderBy      = array();
+        $this->groupBy      = array();
     }
 
     public function field($fieldName = NULL, $origin = NULL)
     {
         if ($fieldName === NULL) {
-            $this->_fields = array();
+            $this->fields = array();
             return $this;
         }
 
         if ($origin === NULL) {
-            $origin = $this->_tableAlias.'.'.$fieldName;
+            $origin = $this->alias.'.'.$fieldName;
         }
 
-        $this->_fields[$fieldName] = $origin;
+        $this->fields[$fieldName] = $origin;
+
         return $this;
     }
 
     public function where($condition)
     {
-        $this->_conditions[] = $condition;
+        $this->conditions[] = $condition;
 
         return $this;
     }
 
-    public function join($type, $foreignTable, $foreignTableAlias, $foreignColumn, $localColumn, $joinCondition = NULL)
+    public function join($type, $select, $conditions)
     {
-        $this->_joins[] = array(
-            'type'              => $type,
-            'foreignTable'      => $foreignTable,
-            'foreignTableAlias' => $foreignTableAlias,
-            'foreignColumn'     => $foreignColumn,
-            'localTableAlias'   => $this->_tableAlias,
-            'localColumn'       => $localColumn,
-            'joinCondition'     => $joinCondition
-        );
-
-        return $this;
-    }
-
-    public function leftJoin($foreignTable, $foreignTableAlias, $foreignColumn, $localColumn, $joinCondition = NULL)
-    {
-        $this->_joins[] = array(
-            'type'              => 'LEFT',
-            'foreignTable'      => $foreignTable,
-            'foreignTableAlias' => $foreignTableAlias,
-            'foreignColumn'     => $foreignColumn,
-            'localTableAlias'   => $this->_tableAlias,
-            'localColumn'       => $localColumn,
-            'joinCondition'     => $joinCondition
+        $this->joins[] = array(
+            'type'          => $type,
+            'select'        => $select,
+            'conditions'    => (array)$conditions
         );
 
         return $this;
@@ -104,7 +90,7 @@ class Select
 
     public function limit($value)
     {
-        $this->_limit = $value;
+        $this->limit = $value;
 
         return $this;
     }
@@ -112,49 +98,89 @@ class Select
     public function orderBy($value = NULL)
     {
         if ($value === NULL) {
-            $this->_orders = array();
+            $this->orderBy = array();
         } else {
-            $this->_orders[] = $value;
+            $this->orderBy[] = $value;
         }
 
         return $this;
     }
 
-    public function merge($select)
+    public function groupBy($value)
     {
-        $this->_fields  = array_merge($this->_fields, $select->_fields);
-        $this->_joins   = array_merge($this->_joins, $select->_joins);
-        $this->_orders  = array_merge($this->_orders, $select->_orders);
+        $this->groupBy[] = $value;
+
+        return $this;
     }
+
+
+    private function flatten()
+    {
+        foreach ($this->joins as $nestedData) {
+
+            $select = $nestedData['select'];
+            $select->flatten();
+
+            $this->joinData[] = array(
+                'type'          => strtoupper($nestedData['type']),
+                'foreignTable'  => $select->table,
+                'foreignAlias'  => $select->alias,
+                'joinCondition' => implode(' AND ', $nestedData['conditions'])
+            );
+
+            $this->fields       = array_merge($this->fields, $select->fields);
+            $this->joinData     = array_merge($this->joinData, $select->joinData);
+            $this->conditions   = array_merge($this->conditions, $select->conditions);
+        }
+    }
+
 
     public function toSQL()
     {
+        $this->flatten();
+
         $sqlQuery = "SELECT"."\n";
         $allColumns = array();
-        foreach ( $this->_fields as $columnAlias => $columnSource ) {
+        foreach ($this->fields as $columnAlias => $columnSource) {
             $allColumns[] = $columnSource.' as '.$columnAlias;
         }
         $sqlQuery .= implode(', ', $allColumns)."\n";
 
         $sqlQuery .= "FROM"."\n";
-        $sqlQuery .= $this->_table.' '.$this->_tableAlias."\n";
+        $sqlQuery .= $this->table.' '.$this->alias."\n";
 
-        foreach ( $this->_joins as $joinData ) {
-            $keyCondition   = $joinData['foreignTableAlias'].'.'.$joinData['foreignColumn'].' = '.$joinData['localTableAlias'].'.'.$joinData['localColumn'];
-            $joinCondition = isset($joinData['joinCondition']) ? ' AND '.$joinData['joinCondition'] : '';
-            $sqlQuery .= $joinData['type'].' JOIN '.$joinData['foreignTable'].' '.$joinData['foreignTableAlias'].' ON '.$keyCondition.$joinCondition."\n";
+        foreach ($this->joinData as $joinData) {
+            $sqlQuery .= $joinData['type'].' JOIN '.$joinData['foreignTable'].' '.$joinData['foreignAlias'].' ON '.$joinData['joinCondition']."\n";
         }
 
-        if ( $this->_conditions ) {
-            $sqlQuery .= 'WHERE '.implode(' AND ', $this->_conditions)."\n";
+        if ($this->conditions) {
+            $sqlQuery .= 'WHERE '.implode(' AND ', $this->conditions)."\n";
         }
 
-        if ( $this->_orders ) {
-            $sqlQuery .= "ORDER BY ".implode(', ', $this->_orders)."\n";
+        if ($this->groupBy) {
+            $groupBy = array();
+            foreach ($this->groupBy as $fieldName) {
+                if (!isset($this->fields[$fieldName])) {
+                    trigger_error("groupBy($fieldName): no such field");
+                    continue;
+                }
+                $groupBy[] = $this->fields[$fieldName];
+            }
+
+            $sqlQuery .= "GROUP BY ".implode(', ', $groupBy)."\n";
         }
 
-        if ( $this->_limit !== NULL ) {
-            $sqlQuery .= "LIMIT $this->_limit"."\n";
+        if ($this->orderBy) {
+            $orderBy = array();
+            foreach ($this->orderBy as $fieldName) {
+                $orderBy[] = isset($this->fields[$fieldName]) ? $this->fields[$fieldName] : $fieldName;
+            }
+
+            $sqlQuery .= "ORDER BY ".implode(', ', $orderBy)."\n";
+        }
+
+        if ($this->limit !== NULL) {
+            $sqlQuery .= "LIMIT $this->limit"."\n";
         }
 
         return $sqlQuery;
