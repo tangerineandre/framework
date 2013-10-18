@@ -59,7 +59,7 @@ class Map
 
     public function getAttribute($attributeName)
     {
-        return $this->attributes[$attributeName];
+        return isset($this->attributes[$attributeName]) ? $this->attributes[$attributeName] : NULL;
     }
 
     public function getColumn($attributeName)

@@ -43,6 +43,11 @@ class Entity
         return new Entity\Map($className::$map);
     }
 
+    public static function resultSet($alias)
+    {
+        return new ResultSet($alias, self::getMap());
+    }
+
     public static function collection()
     {
         $className = get_called_class();

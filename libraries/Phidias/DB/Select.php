@@ -142,15 +142,15 @@ class Select
         $sqlQuery = "SELECT"."\n";
         $allColumns = array();
         foreach ($this->fields as $columnAlias => $columnSource) {
-            $allColumns[] = $columnSource.' as '.$columnAlias;
+            $allColumns[] = $columnSource.' as `'.$columnAlias.'`';
         }
         $sqlQuery .= implode(', ', $allColumns)."\n";
 
         $sqlQuery .= "FROM"."\n";
-        $sqlQuery .= $this->table.' '.$this->alias."\n";
+        $sqlQuery .= $this->table.' `'.$this->alias."`\n";
 
         foreach ($this->joinData as $joinData) {
-            $sqlQuery .= $joinData['type'].' JOIN '.$joinData['foreignTable'].' '.$joinData['foreignAlias'].' ON '.$joinData['joinCondition']."\n";
+            $sqlQuery .= $joinData['type'].' JOIN '.$joinData['foreignTable'].' `'.$joinData['foreignAlias'].'` ON '.$joinData['joinCondition']."\n";
         }
 
         if ($this->conditions) {
