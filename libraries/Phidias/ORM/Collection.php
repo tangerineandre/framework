@@ -152,7 +152,7 @@ class Collection
                 continue;
             }
             $word = str_replace('%', '\%', $word);
-            $this->where("`$attribute` LIKE :word", array('word' => "%$word%"));
+            $this->where("$attribute LIKE :word", array('word' => "%$word%"));
         }
 
         return $this;
@@ -165,6 +165,17 @@ class Collection
         $remoteMap  = $collection->entity->getMap();
 
         /* Attempt to deduce the relation */
+
+
+        /* 1. By join name*/
+        if ($relationIdentifier === NULL) {
+            if ($localMap->getRelation($name) !== NULL) {
+                $relationIdentifier = $name;
+                $identifierIsLocal  = TRUE;
+            }
+        }
+
+        /* 2. If a single relation to the entity exists */
         if ($relationIdentifier === NULL) {
 
             $outgoingRelations = $localMap->getRelations($collection->entity);

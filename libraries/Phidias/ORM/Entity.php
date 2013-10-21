@@ -40,6 +40,11 @@ class Entity
 
     }
 
+    public function clearID()
+    {
+        $this->_id = NULL;
+    }
+
     public function setValues($values)
     {
         if (!is_array($values)) {
