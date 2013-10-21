@@ -362,10 +362,10 @@ class Collection
         $values = array();
         foreach (array_keys($this->attributes) as $attributeName) {
             $columnName = $this->map->getColumn($attributeName);
-            if (isset($this->nestedCollections[$attributeName])) {
+            if (isset($this->joins[$attributeName])) {
 
                 try {
-                    $values[$columnName] = isset($entity->$attributeName) ? $this->nestedCollections[$attributeName]->save($entity->$attributeName) : NULL;
+                    $values[$columnName] = isset($entity->$attributeName) ? $this->joins[$attributeName]['collection']->save($entity->$attributeName) : NULL;
                 } catch (\Phidias\DB\Exception\DuplicateKey $e) {
                     $values[$columnName] = $e->getKey() == 'PRIMARY' ? $e->getEntry() : NULL;
                 }
