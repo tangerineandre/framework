@@ -1,172 +1,65 @@
 <?php
 namespace Phidias\ORM;
 
-use Phidias\DB;
-use Phidias\DB\Select;
-use Phidias\ORM\Collection\Iterator;
-
 class Collection
 {
-    private $entity;        //Entity definition
-    private $map;
-
-    private $attributes;    //Selected attributes
-    private $nestedCollections;
-    private $nestingRelation;
-    private $innerNesting;
-
-    /*
-     * Suppose the following scenario:
-     *
-     * $person = Person::collection()
-     *              ->attr('name')
-     *              ->attr('birthDay', 'FROM_UNIXTIME(Person.birthDay)')
-     *              ->where('Person.birthDay ...some condition')
-     *
-     * since "birthDay" is not a column in the query, in order to be referenced in the WHERE as "Person.birthDay"
-     * we must keep track of attributes obtained via a SQL construct.  These are refered to as "custom attributes"
-     */
-    private $customAttributes;
-
-    private $alias;
-    private $db;
-    private $resultSet;
-
-    private $selectWhere;
-    private $selectOrder;
-    private $selectLimit;
-
-    private static $nextAlias = 0;
-
+    private $entity;
     private $hasOneElement;
 
-    private $unitOfWork;
+    private $attributes;
+    private $joins;
 
-    /* Attribute values to be updated */
+    private $where;
+    private $orderBy;
+    private $groupBy;
+    private $limit;
+
+    private $map;
+    private $db;
+
+    private $iterator;
+
+    /* DB Write functionality */
+    private $unitOfWork;
     private $updateValues;
 
-    public function __construct($entity, $map, $hasOneElement = FALSE)
+
+    public function __construct($entity, $hasOneElement = FALSE)
     {
-        $this->entity               = $entity;
-        $this->map                  = $map;
-        $this->attributes           = array();
-        $this->nestedCollections    = array();
-        $this->nestingRelation      = NULL;
-        $this->innerNesting         = FALSE;
+        $this->entity           = $entity;
+        $this->hasOneElement    = $hasOneElement;
 
-        $this->customAttributes     = array();
+        $this->attributes       = array();
+        $this->joins            = array();
 
-        /* Allocate a unique alias */
-        $this->alias = $this->map->getTable().self::$nextAlias++;
+        $this->where            = array();
+        $this->groupBy          = array();
+        $this->orderBy          = array();
+        $this->limit            = NULL;
 
-        /* Connect to the DB */
-        $this->db   = DB::connect($this->map->getDB());
+        $this->map              = $this->entity->getMap();
+        $this->db               = \Phidias\DB::connect($this->map->getDB());
 
-        /* Select options */
-        $this->selectWhere          = array();
-        $this->selectOrder          = array();
-        $this->selectLimit          = NULL;
+        $this->iterator         = NULL;
 
-        /* Set initial attributes: Key attributes are ALWAYS selected */
-        foreach ($this->map->getKeys() as $keyAttributeName) {
-            $this->attr($keyAttributeName);
-        }
-
-        /* Special cases: collections with one element */
-        $this->hasOneElement = $hasOneElement;
+        $this->unitOfWork       = array();
+        $this->updateValues     = array();
     }
 
-    public function getDB()
+    public function iterator($iterator)
     {
-        return $this->db;
-    }
-
-    public function getMap()
-    {
-        return $this->map;
-    }
-
-    public function getAttributes()
-    {
-        return $this->attributes;
-    }
-
-    public function getNestedCollections()
-    {
-        return $this->nestedCollections;
-    }
-
-
-    public function relatedWith($relationName)
-    {
-        $this->nestingRelation = $relationName;
+        $this->iterator = $iterator;
 
         return $this;
     }
 
-    public function notEmpty()
+    public function attr($name, $origin = NULL)
     {
-        $this->innerNesting = TRUE;
-        return $this;
-    }
-
-
-    public function attr($attributeName, $attributeSource = NULL, $parameters = NULL)
-    {
-        if ($attributeSource instanceof Collection) {
-
-            $nestedCollection = $attributeSource;
-
-            /* Determine the relation for nesting */
-            $nestingRelationName    = isset($nestedCollection->nestingRelation) ? $nestedCollection->nestingRelation : $attributeName;
-            $nestedMap              = $nestedCollection->map;
-
-            if ( $this->map->hasRelation($nestingRelationName) ) {
-
-                $relationData   = $this->map->getRelation($nestingRelationName);
-                $localColumn    = $relationData['column'];
-                $foreignColumn  = $relationData['attribute'];
-
-            } elseif ( $nestedMap->hasRelation($nestingRelationName) ) {
-
-                $relationData   = $nestedMap->getRelation($nestingRelationName);
-                $localColumn    = $relationData['attribute'];
-                $foreignColumn  = $relationData['column'];
-
-            } else {
-
-                $foreignRelations = $nestedMap->getRelations($this->entity);
-
-                if (!count($foreignRelations)) {
-                    trigger_error("Relation '$nestingRelationName' not found.  Specify the related attribute with collection::relatedWith", E_USER_ERROR);
-                }
-
-                /* Use the first found relation relating the foreign entity to this one */
-                $relationData   = array_pop($foreignRelations);
-                $localColumn    = $relationData['attribute'];
-                $foreignColumn  = $relationData['column'];
-
-            }
-
-            array_unshift($nestedCollection->selectOrder, $nestedCollection->alias.'.'.$foreignColumn);
-
-            $this->nestedCollections[$attributeName] = array(
-                'foreignCollection' => $nestedCollection,
-                'foreignColumn'     => $foreignColumn,
-                'localColumn'       => $localColumn
-            );
-
-            return $this;
+        if ($origin instanceof Collection) {
+            $this->join($name, 'left', $origin);
+        } else {
+            $this->attributes[$name] = $origin;
         }
-
-        if (gettype($attributeSource) == 'string') {
-            if (is_array($parameters)) {
-                $attributeSource = $this->db->bindParameters($attributeSource, $parameters);
-            }
-            $this->customAttributes[$attributeName] = $attributeSource;
-        }
-
-        $this->attributes[$attributeName] = $attributeSource;
 
         return $this;
     }
@@ -189,18 +82,6 @@ class Collection
         return $this;
     }
 
-
-    public function where($stringCondition, $parameters = NULL)
-    {
-        /* Bind parameters */
-        if ( is_array($parameters) ) {
-            $stringCondition = $this->db->bindParameters($stringCondition, $parameters);
-        }
-        $this->selectWhere[] = $stringCondition;
-
-        return $this;
-    }
-
     public function whereKey($keyValue)
     {
         $keyValue           = (array)$keyValue;
@@ -214,32 +95,43 @@ class Collection
         }
     }
 
+    public function where($condition, $parameters = NULL)
+    {
+        $this->where[] = $parameters ? $this->db->bindParameters($condition, $parameters) : $condition;
+
+        return $this;
+    }
+
+    public function groupBy($group, $parameters = NULL)
+    {
+        $this->groupBy[] = $parameters ? $this->db->bindParameters($group, $parameters) : $group;
+
+        return $this;
+    }
+
+    public function orderBy($order, $parameters = NULL)
+    {
+        $this->orderBy[] = $parameters ? $this->db->bindParameters($order, $parameters) : $order;
+
+        return $this;
+    }
+
+    public function limit($limit)
+    {
+        $this->limit = $limit;
+        return $this;
+    }
+
     public function equals($attributeName, $value)
     {
         $attributeName = "`$attributeName`";
 
         if ( $value === NULL ) {
-            $this->selectWhere[] = $attributeName.' IS NULL';
+            $this->where("$attributeName IS NULL");
         } else {
-            $sanitizedValue = $this->db->sanitizeValue($value);
-
-            if ($sanitizedValue !== NULL) {
-                $this->selectWhere[] = $attributeName." = ".$sanitizedValue;
-            }
+            $this->where("$attributeName = :value", array('value' => $value));
         }
 
-        return $this;
-    }
-
-    public function limit($value)
-    {
-        $this->selectLimit = $value;
-        return $this;
-    }
-
-    public function orderBy($value)
-    {
-        $this->selectOrder[] = $value;
         return $this;
     }
 
@@ -251,29 +143,176 @@ class Collection
                 continue;
             }
             $word = str_replace('%', '\%', $word);
-            $this->where("$attribute LIKE :word", array('word' => "%$word%"));
+            $this->where("`$attribute` LIKE :word", array('word' => "%$word%"));
         }
 
         return $this;
     }
 
 
-    public function find($primaryKeyValue = NULL)
+    private function join($name, $type, $collection, $relationIdentifier = NULL, $identifierIsLocal = NULL)
     {
-        $iterator = new Iterator($this);
+        $localMap   = $this->entity->getMap();
+        $remoteMap  = $collection->entity->getMap();
 
-        if ($this->hasOneElement) {
-            $this->limit(1);
+        /* Attempt to deduce the relation */
+        if ($relationIdentifier === NULL) {
 
-            if ($primaryKeyValue !== NULL) {
-                $this->whereKey($primaryKeyValue);
+            $outgoingRelations = $localMap->getRelations($collection->entity);
+            if (count($outgoingRelations) == 1) {
+                $relationIdentifier = array_pop(array_keys($outgoingRelations));
+                $identifierIsLocal  = TRUE;
+            } else {
+
+                $incomingRelations = $remoteMap->getRelations($this->entity);
+                if (count($incomingRelations) == 1) {
+                    $relationIdentifier = array_pop(array_keys($incomingRelations));
+                    $identifierIsLocal  = FALSE;
+                }
+
             }
 
+        }
+
+        if ($relationIdentifier == NULL) {
+            $localClass  = get_class($this->entity);
+            $remoteClass = get_class($collection->entity);
+            trigger_error("Could not determine relation from '$localClass' to '$remoteClass'", E_USER_ERROR);
+        }
+
+
+        $relation = $identifierIsLocal ? $localMap->getRelation($relationIdentifier) : $remoteMap->getRelation($relationIdentifier);
+        if ($relation == NULL) {
+            trigger_error("Relation '$relationIdentifier' not found", E_USER_ERROR);
+        }
+
+        if ($identifierIsLocal) {
+            $toAttribute    = $remoteMap->getAttribute($relation['attribute']);
+            $localColumn    = $relation['column'];
+            $foreignColumn  = $toAttribute['column'];
+        } else {
+            $fromAttribute  = $localMap->getAttribute($relation['attribute']);
+            $localColumn    = $fromAttribute['column'];
+            $foreignColumn  = $relation['column'];
+        }
+
+        $this->joins[$name] = array(
+            'type'          => $type,
+            'collection'    => $collection,
+            'localColumn'   => $localColumn,
+            'foreignColumn' => $foreignColumn
+        );
+
+        return $this;
+    }
+
+    private function buildAliasMap($alias)
+    {
+        $retval = array();
+        foreach ($this->map->getAttributes() as $attributeName => $attributeData) {
+            $retval["$alias.$attributeName"] = '`'.$alias.'`.`'.$attributeData['column'].'`';
+        }
+
+        foreach ($this->joins as $name => $join) {
+            $retval = array_merge($retval, $join['collection']->buildAliasMap("$alias.$name"));
+        }
+
+        return $retval;
+    }
+
+    private function translate($string, $aliasMap)
+    {
+        return strtr($string, $aliasMap);
+    }
+
+    private function buildSelect($alias = NULL, $aliasMap = NULL)
+    {
+        if ($alias == NULL) {
+            $alias = get_class($this->entity);
+        }
+
+        if ($aliasMap == NULL) {
+            $aliasMap = $this->buildAliasMap($alias);
+        }
+
+        $select = new \Phidias\DB\Select($this->map->getTable(), $alias);
+
+        /* Always select keys */
+        foreach ($this->map->getKeys() as $keyAttributeName) {
+            $select->field($alias.'.'.$keyAttributeName, $this->translate($alias.'.'.$keyAttributeName, $aliasMap));
+        }
+
+        foreach ($this->attributes as $name => $origin) {
+            if ($origin == NULL) {
+                $origin = $alias.'.'.$name;
+            }
+            $select->field($alias.'.'.$name, $this->translate($origin, $aliasMap));
+        }
+
+        foreach ($this->where as $condition) {
+            $select->where($this->translate($condition, $aliasMap));
+        }
+
+        foreach ($this->groupBy as $group) {
+            $select->groupBy($this->translate($group, $aliasMap));
+        }
+
+        foreach ($this->orderBy as $order) {
+            $select->orderBy($this->translate($order, $aliasMap));
+        }
+
+        foreach ($this->joins as $name => $join) {
+            $condition = "`$alias`.`{$join['localColumn']}` = `$alias.$name`.`{$join['foreignColumn']}`";
+            $select->join($join['type'], $join['collection']->buildSelect("$alias.$name", $aliasMap), $condition);
+        }
+
+
+        return $select;
+    }
+
+    private function buildIterator($alias = NULL)
+    {
+        if ($alias === NULL) {
+            $alias = get_class($this->entity);
+        }
+
+        $key = array();
+        foreach ($this->map->getKeys() as $attributeName) {
+            $key[] = "$alias.$attributeName";
+        }
+
+        $iterator = new \Phidias\DB\Iterator(get_class($this->entity), $key, $this->hasOneElement);
+
+        foreach (array_keys($this->attributes) as $attributeName) {
+            $iterator->attr($attributeName, "$alias.$attributeName");
+        }
+
+        foreach ($this->joins as $attributeName => $joinData) {
+            $iterator->attr($attributeName, $joinData['collection']->buildIterator("$alias.$attributeName"));
+        }
+
+        return $iterator;
+    }
+
+    public function find($primaryKeyValue = NULL)
+    {
+        if ($this->hasOneElement) {
+            $this->limit(1);
+        }
+
+        if ($primaryKeyValue !== NULL) {
+            $this->whereKey($primaryKeyValue);
+        }
+
+        $resultSet  = $this->db->select($this->buildSelect());
+        $iterator   = $this->iterator == NULL ? $this->buildIterator() : $this->iterator;
+        $iterator->setResultSet($resultSet);
+
+        if ($primaryKeyValue) {
             $iterator = $iterator->first();
             if ($iterator === NULL) {
                 throw new Exception\EntityNotFound(get_class($this->entity), implode(', ', (array)$primaryKeyValue));
             }
-
         }
 
         return $iterator;
@@ -294,192 +333,6 @@ class Collection
 
         return isset($retval['count']) ? $retval['count'] : NULL;
     }
-
-
-    /* Data for creating the query and obtaining the resultSet */
-    public function getAlias()
-    {
-        return $this->alias;
-    }
-
-    public function getEntity()
-    {
-        return $this->entity;
-    }
-
-    public function toObject($row, $pointer, $resultSet)
-    {
-        /* First, determine the object's ID */
-        $id = array();
-        foreach ($this->map->getKeys() as $keyName) {
-            $keyFieldName = $this->alias.'_'.$keyName;
-            $id[] = $row[$keyFieldName]; //we can assume this value is set since the collection  ALWAYS includes the key attributes
-        }
-
-        /* Create the new Entity */
-        $returnClassName    = get_class($this->entity);
-        $returnObject       = new $returnClassName($id, FALSE);
-
-        /* Set all the attributes */
-        foreach (array_keys($this->attributes) as $attributeName) {
-            $returnObject->$attributeName = $row[$this->alias.'_'.$attributeName];
-        }
-
-        /* Get all nested collections */
-        if ($this->nestedCollections) {
-
-            /* Build conditions to determine which record in the resultset correspond to this entities nested objects (i.e. its "restrictions") */
-            $restrictions = array();
-            foreach ($this->map->getKeys() as $keyName) {
-                $keyFieldName = $this->alias.'_'.$keyName;
-
-                $restrictions[] = array(
-                    'column'    => $keyFieldName,
-                    'value'     => $row[$keyFieldName]
-                );
-            }
-
-            foreach ($this->nestedCollections as $attributeName => $nestedCollectionData) {
-                $iterator = new Iterator($nestedCollectionData['foreignCollection'], $resultSet, $pointer, $restrictions);
-                $returnObject->$attributeName = $nestedCollectionData['foreignCollection']->hasOneElement ? $iterator->first() : $iterator;
-            }
-        }
-
-        return $returnObject;
-    }
-
-    public function getResultSet()
-    {
-        if ( $this->resultSet === NULL ) {
-            $this->resultSet = $this->db->select($this->buildSelect());
-        }
-
-        return $this->resultSet;
-    }
-
-    public function buildSelect($aliasMap = NULL)
-    {
-        if ($aliasMap === NULL) {
-            $aliasMap = $this->buildAliasMap();
-        }
-
-        $select = new Select($this->map->getTable(), $this->alias);
-
-        foreach ($this->selectWhere as $condition) {
-            $select->where($this->translate($condition, $aliasMap));
-        }
-
-        if (!$this->selectOrder) {
-            foreach ($this->map->getKeys() as $keyName) {
-                $this->orderBy($this->alias.'.'.$keyName);
-            }
-        }
-
-        foreach ($this->selectOrder as $order) {
-            $select->orderBy($this->translate($order, $aliasMap));
-        }
-
-        $select->limit($this->selectLimit);
-
-        /* Select collection attributes */
-        foreach ($this->attributes as $attributeName => $attributeSource) {
-
-            if ($attributeSource === NULL) {
-                $columnName         = $this->map->getColumn($attributeName);
-                $attributeSource    = $this->alias.'.'.$columnName;
-            } else {
-                $attributeSource    = $this->translate($attributeSource, $aliasMap);
-            }
-
-            $select->field($this->alias.'_'.$attributeName, $attributeSource);
-        }
-
-        /* Join with nested collections */
-        foreach($this->nestedCollections as $attributeName => $nestedCollectionData) {
-
-            $nestedCollection = $nestedCollectionData['foreignCollection'];
-
-            $joinConditions = array($nestedCollection->alias.'.'.$nestedCollectionData['foreignColumn']. ' = '.$this->alias.'.'.$nestedCollectionData['localColumn']);
-            foreach ($nestedCollection->selectWhere as $condition) {
-                $joinConditions[] = $this->translate($condition, $aliasMap);
-            }
-            $nestedCollection->selectWhere = array();
-
-            $select->join($nestedCollection->innerNesting ? 'INNER' : 'LEFT', $nestedCollection->buildSelect($aliasMap), $joinConditions);
-
-        }
-
-
-        return $select;
-    }
-
-
-    /*
-     * Every collection has an identifier.
-     * The BASE collection will use the entity name, while
-     * nested collections will use the parent's identifier followed by .[attributeName].
-     *
-     * Consider this example:
-
-        $person = Person::collection()
-                ->attr('name')
-                ->attr('contactData', Person_Data::collection()
-                    ->attr('address')
-                    ->attr('fullMobile', 'CONCAT(Person.name, Person.contactData.mobile)')
-                )
-                ->where('Person.name = :name', array('name' => 'Santiago'))
-                ->where('Person.contactData.mobile LIKE :mobile', array('module' => '313%'))
-     *
-     * will result in the following query:
-     *
-     * SELECT
-     *  a0.name as a0_name,
-     *  a1.address as a1_address, CONCAT(a0.name, a1.mobile) as a1_fullMobile
-     * FROM people a0
-     * LEFT JOIN people_data a1 ON a1.person = a0.id
-     * WHERE
-     * a0.name = 'Santiago' AND a1.mobile LIKE '313%'
-     *
-     * The alias map will contain a dictionary that translates every possible attribute in the collection
-     * to its corresponding aliased column in the query:
-     *
-     * Person.id    => a0.id
-     * Person.name  => a0.name
-     * Person.firstName => a0.first_name
-     * ....
-     * Person.contactData.address   => a1.address
-     * Person.contactData.phone     => a1.phone
-     *
-     */
-    private function buildAliasMap($identifier = NULL, &$retval = NULL)
-    {
-        if ($identifier === NULL) {
-            $identifier = basename(get_class($this->entity));
-        }
-
-        foreach ($this->nestedCollections as $attributeName => $nestedCollection) {
-            $nestedCollection['foreignCollection']->buildAliasMap("$identifier.$attributeName", $retval);
-        }
-
-        foreach ($this->map->getAttributes() as $attributeName => $attributeData) {
-            $retval["$identifier.$attributeName"] = $this->alias.'.`'.$attributeData['column'].'`';
-        }
-
-        foreach ($this->customAttributes as $attributeName => $attributeSource) {
-            $retval["$identifier.$attributeName"] = $this->translate($attributeSource, $retval);
-        }
-
-        return $retval;
-    }
-
-    /*
-     * Translate a string using the given alias map
-     */
-    private function translate($string, array $aliasMap)
-    {
-        return $string === NULL ? NULL : str_replace(array_keys($aliasMap), $aliasMap, $string);
-    }
-
 
 
 
@@ -512,7 +365,7 @@ class Collection
             if (isset($this->nestedCollections[$attributeName])) {
 
                 try {
-                    $values[$columnName] = isset($entity->$attributeName) ? $this->nestedCollections[$attributeName]['foreignCollection']->save($entity->$attributeName) : NULL;
+                    $values[$columnName] = isset($entity->$attributeName) ? $this->nestedCollections[$attributeName]->save($entity->$attributeName) : NULL;
                 } catch (\Phidias\DB\Exception\DuplicateKey $e) {
                     $values[$columnName] = $e->getKey() == 'PRIMARY' ? $e->getEntry() : NULL;
                 }
@@ -604,19 +457,20 @@ class Collection
             $this->whereKey($entity->getID());
         }
 
-        if (!$this->selectWhere) {
+        if (!$this->where) {
             trigger_error("attempt to delete ignored because no conditions are defined.  If you wish to delete the entire collection use the conditional where(1)");
             return 0;
         }
 
-        $aliasMap           = $this->buildAliasMap();
+        $alias              = get_class($this->entity);
+        $aliasMap           = $this->buildAliasMap($alias);
         $deleteConditions   = array();
-        foreach($this->selectWhere as $where) {
+        foreach($this->where as $where) {
             $deleteConditions[] = $this->translate($where, $aliasMap);
         }
 
         /* Since MySQL does not support "DELETE FROM table a WHERE a.some = thing" */
-        $deleteCondition = str_replace($this->alias.'.', '', implode(' AND ', $deleteConditions));
+        $deleteCondition = str_replace("`$alias`.", '', implode(' AND ', $deleteConditions));
 
         return $this->db->delete($this->map->getTable(), $deleteCondition);
     }
@@ -625,5 +479,6 @@ class Collection
     {
         return $this->db->getInsertID();
     }
+
 
 }

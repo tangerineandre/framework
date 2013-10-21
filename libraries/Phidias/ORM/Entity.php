@@ -1,6 +1,8 @@
 <?php
 namespace Phidias\ORM;
 
+use Phidias\DB\Iterator;
+
 class Entity
 {
     protected static $map;
@@ -11,11 +13,13 @@ class Entity
     public function __construct($_id = NULL, $autoFetch = TRUE)
     {
         if ($_id !== NULL) {
+
+            $this->setID($_id);
+
             if ($autoFetch) {
                 $probe = self::single()->allAttributes()->find($_id);
                 $this->setValues((array)$probe);
             }
-            $this->_id = $_id;
         }
     }
 
@@ -34,35 +38,6 @@ class Entity
             $this->$attributeName = isset($idValue[$index]) ? $idValue[$index] : NULL;
         }
 
-    }
-
-
-    public static function getMap()
-    {
-        $className = get_called_class();
-        return new Entity\Map($className::$map);
-    }
-
-    public static function resultSet($alias)
-    {
-        return new ResultSet($alias, self::getMap());
-    }
-
-    public static function collection()
-    {
-        $className = get_called_class();
-        return new Collection(new $className, self::getMap());
-    }
-
-    public static function single()
-    {
-        $className = get_called_class();
-        return new Collection(new $className, self::getMap(), TRUE);
-    }
-
-    public static function table()
-    {
-        return new Table(self::getMap());
     }
 
     public function setValues($values)
@@ -104,6 +79,36 @@ class Entity
     public function toJSON()
     {
         return json_encode($this);
+    }
+
+
+    /* Factories */
+    public static function getMap()
+    {
+        $className = get_called_class();
+        return new Entity\Map($className::$map);
+    }
+
+    public static function iterator($key)
+    {
+        return new Iterator(get_called_class(), $key);
+    }
+
+    public static function collection()
+    {
+        $className = get_called_class();
+        return new Collection(new $className);
+    }
+
+    public static function single()
+    {
+        $className = get_called_class();
+        return new Collection(new $className, TRUE);
+    }
+
+    public static function table()
+    {
+        return new Table(self::getMap());
     }
 
 

@@ -89,7 +89,7 @@ class Map
             return $this->relations;
         }
 
-        $className = get_class($entity);
+        $className = is_object($entity) ? get_class($entity) : $entity;
 
         $retval = array();
         foreach ($this->relations as $relationName => $relationData) {
@@ -97,6 +97,7 @@ class Map
                 $retval[$relationName] = $relationData;
             }
         }
+
         return $retval;
     }
 
