@@ -19,6 +19,8 @@ class Collection
 
     private $iterator;
 
+    private $joinAsInner;
+
     /* DB Write functionality */
     private $unitOfWork;
     private $updateValues;
@@ -44,6 +46,15 @@ class Collection
 
         $this->unitOfWork       = array();
         $this->updateValues     = array();
+
+        $this->joinAsInner      = FALSE;
+    }
+
+    public function notEmpty()
+    {
+        $this->joinAsInner = TRUE;
+
+        return $this;
     }
 
     public function iterator($iterator)
@@ -56,7 +67,7 @@ class Collection
     public function attr($name, $origin = NULL)
     {
         if ($origin instanceof Collection) {
-            $this->join($name, 'left', $origin);
+            $this->join($name, $origin->joinAsInner ? 'inner' : 'left', $origin);
         } else {
             $this->attributes[$name] = $origin;
         }
@@ -124,8 +135,6 @@ class Collection
 
     public function equals($attributeName, $value)
     {
-        $attributeName = "`$attributeName`";
-
         if ( $value === NULL ) {
             $this->where("$attributeName IS NULL");
         } else {
@@ -160,16 +169,16 @@ class Collection
 
             $outgoingRelations = $localMap->getRelations($collection->entity);
             if (count($outgoingRelations) == 1) {
-                $relationIdentifier = array_pop(array_keys($outgoingRelations));
+                $relationNames      = array_keys($outgoingRelations);
+                $relationIdentifier = array_pop($relationNames);
                 $identifierIsLocal  = TRUE;
             } else {
-
                 $incomingRelations = $remoteMap->getRelations($this->entity);
                 if (count($incomingRelations) == 1) {
-                    $relationIdentifier = array_pop(array_keys($incomingRelations));
+                    $relationNames      = array_keys($incomingRelations);
+                    $relationIdentifier = array_pop($relationNames);
                     $identifierIsLocal  = FALSE;
                 }
-
             }
 
         }

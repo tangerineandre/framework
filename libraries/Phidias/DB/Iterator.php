@@ -17,6 +17,7 @@ class Iterator implements \Iterator
     private $currentRow;
 
     private $fetchFirstRow;
+    private $fetchAllPrefix;
 
     public function __construct($className, $key, $fetchFirstRow = FALSE)
     {
@@ -34,6 +35,7 @@ class Iterator implements \Iterator
         $this->currentRow       = NULL;
 
         $this->fetchFirstRow    = $fetchFirstRow;
+        $this->fetchAllPrefix   = array();
     }
 
     public function setResultSet($resultSet)
@@ -42,6 +44,13 @@ class Iterator implements \Iterator
         foreach ($this->nestedIterators as $nestedIterator) {
             $nestedIterator->setResultSet($resultSet);
         }
+
+        return $this;
+    }
+
+    public function allAttributes($prefix)
+    {
+        $this->fetchAllPrefix[$prefix] = $prefix;
 
         return $this;
     }
@@ -97,6 +106,22 @@ class Iterator implements \Iterator
 
 
 
+    private function filterPrefix($array, $prefix)
+    {
+        $length = strlen($prefix);
+        $retval = array();
+        foreach ($array as $string) {
+            if (substr($string, 0, $length) == $prefix) {
+                $remainder = substr($string, $length+1);
+                if ($remainder && strpos($remainder, ".") === FALSE) {
+                    $retval[$remainder] = $string;
+                }
+            }
+        }
+
+        return $retval;
+    }
+
     function rewind()
     {
         $this->resultSet->data_seek($this->pointerStart);
@@ -106,6 +131,15 @@ class Iterator implements \Iterator
         foreach ($this->key as $index => $attribute) {
             $this->lastSeenKeys[$index] = $this->currentRow[$attribute];
         }
+
+        if ($this->currentRow !== NULL) {
+            foreach ($this->fetchAllPrefix as $prefix) {
+                foreach ($this->filterPrefix(array_keys($this->currentRow), $prefix) as $name => $origin) {
+                    $this->attr($name, $origin);
+                }
+            }
+        }
+
     }
 
     function valid()

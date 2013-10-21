@@ -54,10 +54,6 @@ class Entity
                 continue;
             }
 
-            if ($value === NULL) {
-                continue;
-            }
-
             if ($map->hasRelation($attribute) && is_array($value)) {
                 if (!($this->$attribute instanceof Entity)) {
                     $relationData = $map->getRelation($attribute);
@@ -71,14 +67,27 @@ class Entity
         }
     }
 
+    public function fetchAll()
+    {
+        $retval = clone($this);
+
+        foreach (get_object_vars($retval) as $attributeName => $value ) {
+            if ($value instanceof \Phidias\DB\Iterator) {
+                $retval->$attributeName = $retval->$attributeName->fetchAll();
+            }
+        }
+
+        return $retval;
+    }
+
     public function toArray()
     {
-        return (array)$this;
+        return (array)$this->fetchAll();
     }
 
     public function toJSON()
     {
-        return json_encode($this);
+        return json_encode($this->fetchAll());
     }
 
 
@@ -89,9 +98,9 @@ class Entity
         return new Entity\Map($className::$map);
     }
 
-    public static function iterator($key)
+    public static function iterator($key, $singleElement = FALSE)
     {
-        return new Iterator(get_called_class(), $key);
+        return new Iterator(get_called_class(), $key, $singleElement);
     }
 
     public static function collection()
