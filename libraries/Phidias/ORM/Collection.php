@@ -44,7 +44,7 @@ class Collection
 
         $this->iterator         = NULL;
 
-        $this->unitOfWork       = array();
+        $this->unitOfWork       = NULL;
         $this->updateValues     = array();
 
         $this->joinAsInner      = FALSE;
@@ -286,6 +286,9 @@ class Collection
             $select->join($join['type'], $join['collection']->buildSelect("$alias.$name", $aliasMap), $condition);
         }
 
+        if ($this->limit) {
+            $select->limit($this->limit);
+        }
 
         return $select;
     }
@@ -360,7 +363,7 @@ class Collection
     public function add($entity)
     {
         if ($this->unitOfWork === NULL) {
-            $this->unitOfWork = new Collection\UnitOfWork($this);
+            $this->unitOfWork = new Collection\UnitOfWork($this->attributes, $this->joins, $this->map, $this->db);
         }
 
         $this->unitOfWork->add($entity);

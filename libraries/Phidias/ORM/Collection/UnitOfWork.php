@@ -4,7 +4,7 @@ namespace Phidias\ORM\Collection;
 class UnitOfWork
 {
     private $attributes;
-    private $nestedCollections;
+    private $joins;
     private $map;
     private $db;
 
@@ -12,12 +12,12 @@ class UnitOfWork
     private $maxFlushSize;
     private $insertCount;
 
-    public function __construct($collection)
+    public function __construct($attributes, $joins, $map, $db)
     {
-        $this->attributes           = $collection->getAttributes();
-        $this->nestedCollections    = $collection->getNestedCollections();
-        $this->map                  = $collection->getMap();
-        $this->db                   = $collection->getDB();
+        $this->attributes   = $attributes;
+        $this->joins        = $joins;
+        $this->map          = $map;
+        $this->db           = $db;
 
         $this->pile          = array();
         $this->maxFlushSize  = 10000;
@@ -43,10 +43,10 @@ class UnitOfWork
     {
         $columnNames = array();
         foreach (array_keys($this->attributes) as $attributeName) {
-            $columnNames[] = $this->map['attributes'][$attributeName]['column'];
+            $columnNames[] = $this->map->getColumn($attributeName);
         }
 
-        $this->insertCount += $this->db->insert($this->map['table'], $columnNames, $this->pile);
+        $this->insertCount += $this->db->insert($this->map->getTable(), $columnNames, $this->pile);
         $this->clear();
 
         return $this->insertCount;
@@ -59,19 +59,19 @@ class UnitOfWork
         $object = (array)$object;
 
         /* Resolve nestings */
-        foreach ($this->nestedCollections as $attributeName => $collectionData) {
+        foreach ($this->joins as $attributeName => $joinData) {
 
             if (!isset($object[$attributeName])) {
                 continue;
             }
 
-            $nestedMap     = $collectionData['foreignCollection']->getMap();
+            $nestedMap     = $joinData['collection']->getMap();
             $expectedKey   = $nestedMap['keys'][0];
-            $collectionData['foreignCollection']->add($object[$attributeName]);
+            $joinData['collection']->add($object[$attributeName]);
 
             try {
-                $collectionData['foreignCollection']->save();
-                $object[$attributeName] = isset($nestedMap['attributes'][$expectedKey]['autoIncrement']) ? $collectionData['foreignCollection']->getInsertID() : $object[$attributeName][$expectedKey];
+                $joinData['collection']->save();
+                $object[$attributeName] = $nestedMap->isAutoIncrement($expectedKey) ? $joinData['collection']->getInsertID() : $object[$attributeName][$expectedKey];
             } catch (\Phidias\DB\Exception\DuplicateKey $e) {
                 $object[$attributeName] = $object[$attributeName][$expectedKey];
             }
@@ -80,7 +80,7 @@ class UnitOfWork
 
         foreach (array_keys($this->attributes) as $attributeName) {
 
-            $targetColumn = $this->map['attributes'][$attributeName]['column'];
+            $targetColumn = $this->map->getColumn($attributeName);
 
             if (!isset($object[$attributeName]) || is_array($object[$attributeName]) ) {
 

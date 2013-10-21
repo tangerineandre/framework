@@ -92,7 +92,7 @@ class DB
             $query = $this->bindParameters($query, $parameters);
         }
 
-        Debug::startBlock(strlen($query) > 2048 ? '[Query too long to debug]' : $query, 'SQL');
+        Debug::startBlock(strlen($query) > 5120 ? '[Query too long to debug]' : $query, 'SQL');
         $result = $this->_mysqli->query($query);
         Debug::endBlock();
 
