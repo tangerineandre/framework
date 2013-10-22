@@ -4,7 +4,15 @@ namespace Phidias\Core;
 use Phidias\Component\HTTP\Request;
 
 /* Possible exceptions */
-class Application_ResourceNotFound_Exception extends \Exception {}
+class Application_ResourceNotFound_Exception extends \Exception {
+
+    public function __construct($message = NULL, $code = NULL, $previous = NULL) {
+        \Phidias\Component\HTTP\Response::code(404);
+        parent::__construct($message, $code, $previous);
+    }
+
+}
+
 class Application_WrongArgumentCount_Exception extends \Exception {}
 
 class Application
