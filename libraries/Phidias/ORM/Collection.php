@@ -146,6 +146,10 @@ class Collection
 
     public function like($attribute, $query)
     {
+        if ($query === NULL || !trim($query)) {
+            return $this;
+        }
+
         $words = explode(' ', trim($query));
         foreach ($words as $word) {
             if (!$word = trim($word)) {
