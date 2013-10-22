@@ -79,7 +79,7 @@ class Iterator implements \Iterator
     function current()
     {
         $id         = array();
-        $assertions = array();
+        $assertions = $this->assertions;
         foreach ($this->key as $keyFieldName) {
             $id[]                       = $this->currentRow[$keyFieldName];
             $assertions[$keyFieldName]  = $this->currentRow[$keyFieldName];
