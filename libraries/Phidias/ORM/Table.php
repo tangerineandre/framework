@@ -88,6 +88,32 @@ class Table
     public function create()
     {
         $this->getDB()->create($this->table);
+
+        /* Create triggers */
+        $tableName  = $this->map->getTable();
+        $triggers   = $this->map->getTriggers();
+        foreach ($triggers as $operation => $actions) {
+            foreach ($actions as $when => $code) {
+
+                if (!$code) {
+                    continue;
+                }
+
+                $triggerName = "{$tableName}_{$when}_{$operation}";
+
+                $this->getDB()->query("DROP TRIGGER IF EXISTS `$triggerName`");
+                $this->getDB()->query("CREATE TRIGGER `$triggerName` $when $operation ON `$tableName`
+                    FOR EACH ROW
+                    BEGIN
+                        IF (@DISABLE_TRIGGERS IS NULL) then
+                            $code
+                        END IF;
+                    END
+                ");
+
+            }
+        }
+
     }
 
 }

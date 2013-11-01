@@ -20,6 +20,7 @@ class Collection
     private $iterator;
 
     private $joinAsInner;
+    private $relationAlias;
 
     /* DB Write functionality */
     private $unitOfWork;
@@ -48,11 +49,19 @@ class Collection
         $this->updateValues     = array();
 
         $this->joinAsInner      = FALSE;
+        $this->relationAlias    = NULL;
     }
 
     public function notEmpty()
     {
         $this->joinAsInner = TRUE;
+
+        return $this;
+    }
+
+    public function relatedWith($alias)
+    {
+        $this->relationAlias = $alias;
 
         return $this;
     }
@@ -67,7 +76,7 @@ class Collection
     public function attr($name, $origin = NULL)
     {
         if ($origin instanceof Collection) {
-            $this->join($name, $origin->joinAsInner ? 'inner' : 'left', $origin);
+            $this->join($name, $origin->joinAsInner ? 'inner' : 'left', $origin, $origin->relationAlias);
         } else {
             $this->attributes[$name] = $origin;
         }
