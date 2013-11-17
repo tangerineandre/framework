@@ -82,4 +82,22 @@ class Phidias_Orm_Controller extends Controller
 
 
     }
+
+    public function truncate()
+    {
+        $environmentStack = Environment::getStack();
+
+        $entities = array();
+        $this->findEntities($entities, $environmentStack[0].'/application/modules');
+        $organized = array();
+
+        foreach (array_keys($entities) as $entityName) {
+            $this->organizeEntity($entityName, $entities, $organized);
+        }
+
+        foreach (array_reverse($organized) as $entity) {
+            $table = $entity::table();
+            $table->clear();
+        }
+    }
 }

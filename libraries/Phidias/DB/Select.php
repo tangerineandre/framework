@@ -28,7 +28,7 @@ class Select
 {
     private $table;
     private $alias;
-
+    private $useIndex;
     private $fields;
     private $conditions;
     private $joins;
@@ -46,6 +46,7 @@ class Select
         $this->table        = $table;
         $this->alias        = $alias;
 
+        $this->useIndex     = array();
         $this->fields       = array();
         $this->conditions   = array();
         $this->joins        = array();
@@ -113,6 +114,13 @@ class Select
         return $this;
     }
 
+    public function useIndex($index)
+    {
+        $this->useIndex[] = $index;
+
+        return $this;
+    }
+
 
     private function flatten()
     {
@@ -135,19 +143,35 @@ class Select
     }
 
 
-    public function toSQL()
+    public function toSQL($count = FALSE)
     {
         $this->flatten();
 
-        $sqlQuery = "SELECT"."\n";
-        $allColumns = array();
-        foreach ($this->fields as $columnAlias => $columnSource) {
-            $allColumns[] = $columnSource.' as `'.$columnAlias.'`';
+        if ($count) {
+
+
+            if ($this->groupBy) {
+                $countField = "DISTINCT({$this->groupBy[0]})";
+            } else {
+                $countField = '*';
+            }
+
+            $sqlQuery = "SELECT COUNT($countField) as count "."\n";
+        } else {
+            $sqlQuery = "SELECT"."\n";
+            $allColumns = array();
+            foreach ($this->fields as $columnAlias => $columnSource) {
+                $allColumns[] = $columnSource.' as `'.$columnAlias.'`';
+            }
+            $sqlQuery .= implode(', ', $allColumns)." \n";
         }
-        $sqlQuery .= implode(', ', $allColumns)."\n";
 
         $sqlQuery .= "FROM"."\n";
         $sqlQuery .= $this->table.' `'.$this->alias."`\n";
+
+        if ($this->useIndex) {
+            $sqlQuery .= "USE INDEX(".implode(', ', $this->useIndex).")"."\n";
+        }
 
         foreach ($this->joinData as $joinData) {
             $sqlQuery .= $joinData['type'].' JOIN '.$joinData['foreignTable'].' `'.$joinData['foreignAlias'].'` ON '.$joinData['joinCondition']."\n";
@@ -157,20 +181,11 @@ class Select
             $sqlQuery .= 'WHERE '.implode(' AND ', $this->conditions)."\n";
         }
 
-        if ($this->groupBy) {
-            $groupBy = array();
-            foreach ($this->groupBy as $fieldName) {
-                if (!isset($this->fields[$fieldName])) {
-                    trigger_error("groupBy($fieldName): no such field");
-                    continue;
-                }
-                $groupBy[] = $this->fields[$fieldName];
-            }
-
-            $sqlQuery .= "GROUP BY ".implode(', ', $groupBy)."\n";
+        if ($this->groupBy && !$count) {
+            $sqlQuery .= "GROUP BY ".implode(', ', $this->groupBy)."\n";
         }
 
-        if ($this->orderBy) {
+        if ($this->orderBy && !$count) {
             $orderBy = array();
             foreach ($this->orderBy as $fieldName) {
                 $orderBy[] = isset($this->fields[$fieldName]) ? $this->fields[$fieldName] : $fieldName;
@@ -179,7 +194,7 @@ class Select
             $sqlQuery .= "ORDER BY ".implode(', ', $orderBy)."\n";
         }
 
-        if ($this->limit !== NULL) {
+        if ($this->limit !== NULL && !$count) {
             $sqlQuery .= "LIMIT $this->limit"."\n";
         }
 

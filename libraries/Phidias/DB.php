@@ -244,6 +244,14 @@ class DB
         return $this->query($select->toSQL());
     }
 
+    public function count(DB\Select $select)
+    {
+        $resultSet  = $this->query($select->toSQL(TRUE));
+        $retval     = $resultSet->fetch_assoc();
+
+        return isset($retval['count']) ? $retval['count'] : NULL;
+    }
+
 
 
     /**
@@ -286,6 +294,9 @@ class DB
             $targetRecords[] = $targetRecord;
         }
 
+        if (!count($targetRecords)) {
+            return 0;
+        }
 
         $sanitizedRecords = array();
         foreach ($targetRecords as $targetRecord) {

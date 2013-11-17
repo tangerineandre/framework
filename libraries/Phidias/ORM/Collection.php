@@ -35,6 +35,7 @@ class Collection
         $this->attributes       = array();
         $this->joins            = array();
 
+        $this->useIndex         = array();
         $this->where            = array();
         $this->groupBy          = array();
         $this->orderBy          = array();
@@ -171,6 +172,14 @@ class Collection
         return $this;
     }
 
+    public function useIndex($index)
+    {
+        $this->useIndex[] = $index;
+
+        return $this;
+    }
+
+
 
     private function join($name, $type, $collection, $relationIdentifier = NULL, $identifierIsLocal = NULL)
     {
@@ -287,16 +296,29 @@ class Collection
         }
 
         foreach ($this->groupBy as $group) {
-            $select->groupBy($this->translate($group, $aliasMap));
+            $select->groupBy($group);
         }
 
         foreach ($this->orderBy as $order) {
             $select->orderBy($this->translate($order, $aliasMap));
         }
 
+        foreach ($this->useIndex as $index) {
+            $select->useIndex($index);
+        }
+
         foreach ($this->joins as $name => $join) {
-            $condition = "`$alias`.`{$join['localColumn']}` = `$alias.$name`.`{$join['foreignColumn']}`";
-            $select->join($join['type'], $join['collection']->buildSelect("$alias.$name", $aliasMap), $condition);
+            $conditions = array("`$alias`.`{$join['localColumn']}` = `$alias.$name`.`{$join['foreignColumn']}`");
+
+            foreach ($join['collection']->where as $condition) {
+                $conditions[] = $this->translate($condition, $aliasMap);
+            }
+
+            $nestedCollection = clone($join['collection']);
+            $nestedCollection->where = array();
+            $nestedSelect = $nestedCollection->buildSelect("$alias.$name", $aliasMap);
+
+            $select->join($join['type'], $nestedSelect, $conditions);
         }
 
         if ($this->limit) {
@@ -358,16 +380,7 @@ class Collection
     {
         $select = $this->buildSelect();
 
-        $select->limit(NULL);
-        $select->orderBy(NULL);
-        $select->field(NULL);
-
-        $select->field('count', 'COUNT(*)');
-
-        $resultSet  = $this->db->select($select);
-        $retval     = $resultSet->fetch_assoc();
-
-        return isset($retval['count']) ? $retval['count'] : NULL;
+        return $this->db->count($select);
     }
 
 

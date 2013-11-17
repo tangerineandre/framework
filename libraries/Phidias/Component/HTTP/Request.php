@@ -21,10 +21,18 @@ class Request
         return isset($_POST[$name]) && !empty($_POST[$name]) ? $_POST[$name] : $onEmpty;
     }
 
-    public static function JSON()
+    public static function JSON($name = NULL, $onEmpty = NULL)
     {
-        $incomingJSON   = json_decode(file_get_contents('php://input'), true);
-        return $incomingJSON ? $incomingJSON : NULL;
+        $incomingJSON = json_decode(file_get_contents('php://input'), true);
+        if (!$incomingJSON) {
+            return NULL;
+        }
+
+        if ($name === NULL) {
+            return $incomingJSON;
+        }
+
+        return isset($incomingJSON[$name]) ? $incomingJSON[$name] : $onEmpty;
     }
 
     public static function header($name = NULL)
