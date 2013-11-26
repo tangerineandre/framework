@@ -67,4 +67,33 @@ class Filesystem
         self::copyDirectory($sourceDirectory, $targetDirectory);
         Debug::endBlock();
     }
+
+    public static function mktree($dir, $perms = 0777)
+    {
+        $arrpath    = explode('/', $dir);
+        $intdir     = NULL;
+
+        for($cont=0; $cont < count($arrpath); $cont++) {
+            $intdir .= $arrpath[$cont].'/';
+            if(!is_dir($intdir)) {
+                $oldumask = umask(0);
+                if (!mkdir($intdir, $perms)) {
+                    return false;
+                }
+                umask($oldumask);
+            }
+        }
+
+        chmod($dir, $perms);
+        return true;
+    }
+
+    public static function putContents($filename, $data, $flags = 0)
+    {
+        if (!is_dir($dirname = dirname($filename))) {
+            self::mktree($dirname);
+        }
+
+        file_put_contents($filename, $data, $flags);
+    }
 }

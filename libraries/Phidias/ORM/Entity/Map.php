@@ -22,8 +22,7 @@ class Map
 
     public function __construct(array $mapData = NULL)
     {
-        $this->readDB       = NULL;
-        $this->writeDB      = NULL;
+        $this->db           = NULL;
         $this->table        = NULL;
         $this->keys         = array();
         $this->attributes   = array();

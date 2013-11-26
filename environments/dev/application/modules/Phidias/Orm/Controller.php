@@ -17,6 +17,10 @@ class Phidias_Orm_Controller extends Controller
 
             $classname = $basename.str_replace('.php', '', $file);
 
+            if (substr($classname, 0, 2) == 'V3') {
+                continue;
+            }
+
             $object = new $classname;
             $map    = $object->getMap();
 
