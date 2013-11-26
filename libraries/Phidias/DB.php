@@ -456,6 +456,11 @@ class DB
         foreach ( $constraintQueries as $constraintQuery ) {
             $this->query($constraintQuery);
         }
+
+        $indexes = $table->getIndexes();
+        foreach ($indexes as $name => $columns) {
+            $this->query("ALTER TABLE `$tableName` ADD INDEX `$name` (`".implode("`, `", $columns)."`);");
+        }
     }
 
 }

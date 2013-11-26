@@ -77,7 +77,7 @@ class Collection
     public function attr($name, $origin = NULL)
     {
         if ($origin instanceof Collection) {
-            $this->join($name, $origin->joinAsInner ? 'inner' : 'left', $origin, $origin->relationAlias);
+            $this->nest($name, $origin->joinAsInner ? 'inner' : 'left', $origin, $origin->relationAlias);
         } else {
             $this->attributes[$name] = $origin;
         }
@@ -145,8 +145,10 @@ class Collection
 
     public function equals($attributeName, $value)
     {
-        if ( $value === NULL ) {
+        if ($value === NULL) {
             $this->where("$attributeName IS NULL");
+        } else if (is_array($value)) {
+            $this->where("$attributeName IN :value", array('value' => $value));
         } else {
             $this->where("$attributeName = :value", array('value' => $value));
         }
@@ -172,6 +174,88 @@ class Collection
         return $this;
     }
 
+    public function filter($filter)
+    {
+        $filterConditions = array();
+
+        foreach ((array)$filter as $attributeName => $filterData) {
+            if (!is_array($filterData)) {
+                $filterConditions[] = $this->db->bindParameters("$attributeName = :value", array('value' => $filterData));
+            } else {
+                if ($parsed = $this->parseCondition($attributeName, $filterData)) {
+                    $filterConditions[] = $parsed;
+                }
+            }
+        }
+
+        if ($filterConditions) {
+            $this->where("(".implode(' AND ', $filterConditions).")");
+        }
+
+        return $this;
+    }
+
+    private function parseCondition($attributeName, $filterData)
+    {
+        $conditions = array();
+        foreach ($filterData as $operation => $value) {
+            switch ($operation) {
+                case '&gt':
+                    $conditions[] = $this->db->bindParameters("$attributeName > :value", array('value' => $value));
+                break;
+
+                case '&gte':
+                    $conditions[] = $this->db->bindParameters("$attributeName >= :value", array('value' => $value));
+                break;
+
+                case '&lt':
+                    $conditions[] = $this->db->bindParameters("$attributeName < :value", array('value' => $value));
+                break;
+
+                case '&lte':
+                    $conditions[] = $this->db->bindParameters("$attributeName <= :value", array('value' => $value));
+                break;
+
+                case '&in':
+                    $conditions[] = $this->db->bindParameters("$attributeName IN :value", array('value' => $value));
+                break;
+
+                case '&nin':
+                    $conditions[] = $this->db->bindParameters("$attributeName NOT IN :value", array('value' => $value));
+                break;
+
+                case '&ne':
+                    $conditions[] = $this->db->bindParameters("$attributeName != :value", array('value' => $value));
+                break;
+
+                case '&like':
+                    $conditions[] = $this->db->bindParameters("$attributeName LIKE :value", array('value' => $value));
+                break;
+
+
+                case '&or':
+                    $operands = array();
+                    foreach ($value as $condition) {
+                        $operands[] = $this->parseCondition($attributeName, $condition);
+                    }
+                    $conditions[] = '('.implode(' OR ', $operands).')';
+                break;
+
+                case '&and':
+                    $operands = array();
+                    foreach ($value as $condition) {
+                        $operands[] = $this->parseCondition($attributeName, $condition);
+                    }
+                    $conditions[] = '('.implode(' AND ', $operands).')';
+                break;
+            }
+        }
+
+        return $conditions ? '('.implode(' AND ', $conditions).')' : NULL;
+    }
+
+
+
     public function useIndex($index)
     {
         $this->useIndex[] = $index;
@@ -179,9 +263,20 @@ class Collection
         return $this;
     }
 
+    public function join($name, $localColumn, $foreignColumn, $collection, $type = 'inner')
+    {
+        $this->joins[$name] = array(
+            'type'          => $type,
+            'collection'    => $collection,
+            'localColumn'   => $localColumn,
+            'foreignColumn' => $foreignColumn
+        );
+
+        return $this;
+    }
 
 
-    private function join($name, $type, $collection, $relationIdentifier = NULL, $identifierIsLocal = NULL)
+    private function nest($name, $type, $collection, $relationIdentifier = NULL, $identifierIsLocal = NULL)
     {
         $localMap   = $this->entity->getMap();
         $remoteMap  = $collection->entity->getMap();

@@ -18,6 +18,7 @@ class Map
     private $attributes;
     private $relations;
     private $triggers;
+    private $indexes;
 
     public function __construct(array $mapData = NULL)
     {
@@ -28,6 +29,7 @@ class Map
         $this->attributes   = array();
         $this->relations    = array();
         $this->triggers     = array();
+        $this->indexes      = array();
 
         if ($mapData !== NULL) {
             $this->fromArray($mapData);
@@ -108,6 +110,11 @@ class Map
         return $this->triggers;
     }
 
+    public function getIndexes()
+    {
+        return $this->indexes;
+    }
+
 
     private function fromArray($array)
     {
@@ -179,6 +186,10 @@ class Map
         }
         if (!isset($this->triggers['delete']['after'])) {
             $this->triggers['delete']['after'] = null;
+        }
+
+        if (isset($array['indexes'])) {
+            $this->indexes = $array['indexes'];
         }
 
     }

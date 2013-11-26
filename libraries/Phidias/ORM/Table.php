@@ -53,6 +53,10 @@ class Table
             $this->table->setForeignKey($relationData['column'], $relatedEntity::table()->getDbTable(), $relationData['attribute'], $onDelete, $onUpdate);
         }
 
+        foreach ($this->map->getIndexes() as $name => $columns) {
+            $this->table->addIndex($name, $columns);
+        }
+
         unset(self::$lock[$this->map->getTable()]);
     }
 

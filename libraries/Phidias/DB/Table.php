@@ -15,6 +15,7 @@ class Table
     private $columns;
     private $primaryKeys;
     private $foreignKeys;
+    private $indexes;
 
     public function __construct($name)
     {
@@ -22,6 +23,7 @@ class Table
         $this->columns      = array();
         $this->primaryKeys  = array();
         $this->foreignKeys  = array();
+        $this->indexes      = array();
     }
 
     public function getName()
@@ -47,6 +49,11 @@ class Table
     public function getForeignKeys()
     {
         return $this->foreignKeys;
+    }
+
+    public function getIndexes()
+    {
+        return $this->indexes;
     }
 
 
@@ -115,6 +122,11 @@ class Table
             'onUpdate'  => $onUpdate
         );
 
+    }
+
+    public function addIndex($name, $columns)
+    {
+        $this->indexes[$name] = (array)$columns;
     }
 
 }
