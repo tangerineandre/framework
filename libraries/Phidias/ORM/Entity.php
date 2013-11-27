@@ -126,6 +126,51 @@ class Entity
     }
 
 
+    /* Tools and helpers */
+
+
+    /*
+     * Given an array containing either values, objects or arrays,
+     * assume the objects and arrays are instances of this entity, and extract their
+     * current ID.
+     *
+     */
+    public static function extractKeys($array)
+    {
+        $primaryKeys    = self::getMap()->getKeys();
+        $key            = $primaryKeys[0];
+
+        if (is_object($array) && isset($array->$key)) {
+            return $array->$key;
+        }
+
+        if (isset($array[$key])) {
+            return $array[$key];
+        }
+
+        $retval = array();
+        foreach ($array as $element) {
+            if (is_array($element)) {
+
+                if (isset($element[$key])) {
+                    $retval[] = $element[$key];
+                }
+
+            } else if (is_object($element) ) {
+
+                if (isset($element->$key)) {
+                    $retval[] = $element->$key;
+                }
+
+            } else {
+                $retval[] = $element;
+            }
+        }
+
+        return $retval;
+    }
+
+
     /* Shorthand methods */
     private function getCollection()
     {

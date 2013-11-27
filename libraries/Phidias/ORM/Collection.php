@@ -148,7 +148,11 @@ class Collection
         if ($value === NULL) {
             $this->where("$attributeName IS NULL");
         } else if (is_array($value)) {
-            $this->where("$attributeName IN :value", array('value' => $value));
+
+            if (count($value)) {
+                $this->where("$attributeName IN :value", array('value' => $value));
+            }
+
         } else {
             $this->where("$attributeName = :value", array('value' => $value));
         }
@@ -179,6 +183,11 @@ class Collection
         $filterConditions = array();
 
         foreach ((array)$filter as $attributeName => $filterData) {
+
+            if ($filterData === '') {
+                continue;
+            }
+
             if (!is_array($filterData)) {
                 $filterConditions[] = $this->db->bindParameters("$attributeName = :value", array('value' => $filterData));
             } else {
@@ -253,8 +262,6 @@ class Collection
 
         return $conditions ? '('.implode(' AND ', $conditions).')' : NULL;
     }
-
-
 
     public function useIndex($index)
     {
