@@ -183,13 +183,13 @@ class DB
     /* Helper functions */
     public function sanitizeValue($value)
     {
-        if (is_string($value)) {
-            return "'".$this->escapeString($value)."'";
-        } elseif (is_null($value)) {
-            return 'NULL';
-        } elseif (is_numeric($value)) {
+        if (is_numeric($value)) {
             return $value;
-        } elseif (is_array($value)) {
+        } else if (is_string($value)) {
+            return "'".$this->escapeString($value)."'";
+        } else if (is_null($value)) {
+            return 'NULL';
+        } else if (is_array($value)) {
 
             $sanitizedValues = array();
             foreach($value as $subvalue) {
