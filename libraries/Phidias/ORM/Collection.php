@@ -398,7 +398,7 @@ class Collection
         }
 
         foreach ($this->groupBy as $group) {
-            $select->groupBy($group);
+            $select->groupBy($this->translate($group, $aliasMap));
         }
 
         foreach ($this->orderBy as $order) {
@@ -473,6 +473,10 @@ class Collection
             if ($iterator === NULL) {
                 throw new Exception\EntityNotFound(get_class($this->entity), implode(', ', (array)$primaryKeyValue));
             }
+        }
+
+        if ($this->hasOneElement) {
+            return $iterator->first();
         }
 
         return $iterator;

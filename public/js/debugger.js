@@ -21,7 +21,6 @@ $( function() {
 
 
     $('tr.debugger_record').on('click', function() {
-        console.log( $('.son_of_'+$(this).attr('id')) );
         $('.son_of_'+$(this).attr('id')).toggle();
         $(this).toggleClass('open');
 

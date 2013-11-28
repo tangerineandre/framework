@@ -170,6 +170,18 @@ class Entity
         return $retval;
     }
 
+    public static function getNextAutoIncrementValue()
+    {
+        $map    = self::getMap();
+        $db     = \Phidias\DB::connect($map->getDB());
+        $table  = $map->getTable();
+
+        $result = $db->query("SHOW TABLE STATUS LIKE '$table'");
+        $row    = $result->fetch_assoc();
+
+        return isset($row['Auto_increment']) ? $row['Auto_increment'] : NULL;
+    }
+
 
     /* Shorthand methods */
     private function getCollection()
