@@ -473,9 +473,7 @@ class Collection
             if ($iterator === NULL) {
                 throw new Exception\EntityNotFound(get_class($this->entity), implode(', ', (array)$primaryKeyValue));
             }
-        }
-
-        if ($this->hasOneElement) {
+        } else if ($this->hasOneElement) {
             return $iterator->first();
         }
 
@@ -525,8 +523,8 @@ class Collection
                     $values[$columnName] = $e->getKey() == 'PRIMARY' ? $e->getEntry() : NULL;
                 }
 
-            } else {
-                $values[$columnName] = isset($entity->$attributeName) ? $entity->$attributeName : NULL;
+            } else if (isset($entity->$attributeName)) {
+                $values[$columnName] = $entity->$attributeName;
             }
         }
 
