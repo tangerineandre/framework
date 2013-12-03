@@ -193,7 +193,6 @@ class Collection
             $matchingCondition = '(' . implode(' OR ', $matchingConditions) . ')';
             $this->where($matchingCondition, array('word' => "%$word%"));
             //$this->where("CONCAT(".implode(',', $attributes).") LIKE :word", array('word' => "%$word%"));
-
         }
 
         return $this;

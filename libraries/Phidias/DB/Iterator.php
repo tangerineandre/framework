@@ -70,10 +70,12 @@ class Iterator implements \Iterator
         return $this;
     }
 
-    public function attr($name, $origin)
+    public function attr($name, $origin = NULL)
     {
         if ($origin instanceof Iterator) {
             $this->nestedIterators[$name] = $origin;
+        } else if ($origin === NULL) {
+            $this->attributes[$name] = $name;
         } else {
             $this->attributes[$name] = $origin;
         }

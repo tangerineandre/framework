@@ -89,6 +89,18 @@ class Table
         $this->getDB()->clear($this->table);
     }
 
+    public function defragment()
+    {
+        $tableName = $this->table->getName();
+        $this->getDB()->query("ALTER TABLE `$tableName` ENGINE = InnoDB");
+    }
+
+    public function optimize()
+    {
+        $tableName = $this->table->getName();
+        $this->getDB()->query("OPTIMIZE TABLE `$tableName`");
+    }
+
     public function create()
     {
         $this->getDB()->create($this->table);

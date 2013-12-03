@@ -104,4 +104,18 @@ class Phidias_Orm_Controller extends Controller
             $table->clear();
         }
     }
+
+    public function optimize()
+    {
+        $environmentStack = Environment::getStack();
+
+        $entities = array();
+        $this->findEntities($entities, $environmentStack[0].'/application/modules');
+
+        foreach (array_keys($entities) as $entityName) {
+            $table = $entityName::table();
+            $table->defragment();
+            $table->optimize();
+        }
+    }
 }

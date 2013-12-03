@@ -117,6 +117,11 @@ class Map
 
     private function fromArray($array)
     {
+        if (!isset($array['table'])) {
+            trigger_error('invalid map: no table defined', E_USER_ERROR);
+        }
+        $this->table = $array['table'];
+
         if (!isset($array['attributes'])) {
             trigger_error('invalid map: no attributes defined', E_USER_ERROR);
         }
@@ -127,7 +132,7 @@ class Map
 
         foreach ($array['keys'] as $keyName) {
             if (!isset($array['attributes'][$keyName])) {
-                trigger_error("invalid map: key '$keyName' is not defined as attribute", E_USER_ERROR);
+                trigger_error("invalid map: key '$keyName' is not defined as attribute in table '{$this->table}'", E_USER_ERROR);
             }
         }
 
@@ -150,14 +155,6 @@ class Map
 
                 $this->relations[$attributeName] = $attributeData;
             }
-        }
-
-        if (isset($array['db'])) {
-            $this->db = $array['db'];
-        }
-
-        if (isset($array['table'])) {
-            $this->table = $array['table'];
         }
 
         $this->keys = isset($array['keys']) ? $array['keys'] : array();
@@ -189,6 +186,10 @@ class Map
 
         if (isset($array['indexes'])) {
             $this->indexes = $array['indexes'];
+        }
+
+        if (isset($array['db'])) {
+            $this->db = $array['db'];
         }
 
     }

@@ -57,8 +57,15 @@ class Select
 
     public function field($fieldName = NULL, $origin = NULL)
     {
+        /* Clear all fields */
         if ($fieldName === NULL) {
             $this->fields = array();
+
+            /* ...recursively */
+            foreach ($this->joins as $nestedData) {
+                $nestedData['select']->field();
+            }
+
             return $this;
         }
 
