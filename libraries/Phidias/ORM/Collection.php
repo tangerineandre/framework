@@ -374,7 +374,9 @@ class Collection
     private function buildAliasMap($alias)
     {
         $retval = array();
-        foreach ($this->map->getAttributes() as $attributeName => $attributeData) {
+
+        $mapAttributes = $this->map->getAttributes();
+        foreach ($mapAttributes as $attributeName => $attributeData) {
             $retval["$alias.$attributeName"] = '`'.$alias.'`.`'.$attributeData['column'].'`';
         }
 
@@ -385,7 +387,7 @@ class Collection
 
         /* Derived attributes */
         foreach ($this->attributes as $attributeName => $attributeSource) {
-            if ($attributeSource != "NULL") {
+            if (!isset($mapAttributes[$attributeName]) && $attributeSource != "NULL") {
                 $retval["$alias.$attributeName"] = '('.$this->translate($attributeSource, $retval).')';
             }
         }

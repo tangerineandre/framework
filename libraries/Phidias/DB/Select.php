@@ -163,7 +163,7 @@ class Select
             foreach ($this->fields as $columnAlias => $columnSource) {
                 $allColumns[] = $columnSource.' as `'.$columnAlias.'`';
             }
-            $sqlQuery .= implode(', ', $allColumns)." \n";
+            $sqlQuery .= implode(', '."\n", $allColumns)." \n";
         }
 
         $sqlQuery .= "FROM"."\n";
@@ -178,7 +178,7 @@ class Select
         }
 
         if ($this->conditions) {
-            $sqlQuery .= 'WHERE '.implode(' AND ', $this->conditions)."\n";
+            $sqlQuery .= 'WHERE ('.implode(') AND (', $this->conditions).")\n";
         }
 
         if ($this->groupBy && !$count) {

@@ -12,13 +12,7 @@ function printMessage($message, $depth = 0, $parent = NULL)
     <tr id="<?=$messageId?>" class="debugger_record debugger_type_<?=$message->type?> debugger_depth_<?=$depth?> <?=$parentClass?>">
         <td class="debugger_timestamp"><?= number_format($message->timer, 3) ?></td>
         <td class="debugger_message" style="padding-left: <?=$depth*20 + 10?>px">
-            <span class="message">
-                <?php if ($message->messages): ?>
-                    <span class="handle">&#x25BC;</span>
-                <?php endif; ?>
-
-                <?=$message->text?>
-            </span>
+            <span class="message"><?php if ($message->messages): ?><span class="handle">&#x25BC;</span><?php endif; ?><?=trim($message->text)?></span>
             <span class="file"><?=$message->file?>  Line: <?=$message->line?></span>
         </td>
 
@@ -141,6 +135,10 @@ function printMessage($message, $depth = 0, $parent = NULL)
 .phidias_debugger table.debugger_messages tr.debugger_type_SQL td.debugger_message {
   border-left-color: #fba01c;
 }
+.phidias_debugger table.debugger_messages tr.debugger_type_SQL td.debugger_message .message {
+  white-space: pre-wrap;
+}
+
 .phidias_debugger table.debugger_messages tr.debugger_type_SQL td.debugger_message .file {
   color: red;
 }
