@@ -14,6 +14,8 @@ class Collection
     private $groupBy;
     private $limit;
 
+    private $postFilters;
+
     private $map;
     private $db;
 
@@ -41,6 +43,8 @@ class Collection
         $this->orderBy          = array();
         $this->limit            = NULL;
 
+        $this->postFilters      = array();
+
         $this->map              = $this->entity->getMap();
         $this->db               = \Phidias\DB::connect($this->map->getDB());
 
@@ -51,6 +55,13 @@ class Collection
 
         $this->joinAsInner      = FALSE;
         $this->relationAlias    = NULL;
+    }
+
+    public function addPostFilter($filter)
+    {
+        $this->postFilters[] = $filter;
+
+        return $this;
     }
 
     public function notEmpty()
@@ -160,11 +171,13 @@ class Collection
         return $this;
     }
 
-    public function like($attribute, $query)
+    public function search($query, $attributes)
     {
         if ($query === NULL || !trim($query)) {
             return $this;
         }
+
+        $attributes = (array)$attributes;
 
         $words = explode(' ', trim($query));
         foreach ($words as $word) {
@@ -172,7 +185,15 @@ class Collection
                 continue;
             }
             $word = str_replace('%', '\%', $word);
-            $this->where("$attribute LIKE :word", array('word' => "%$word%"));
+
+            $matchingConditions = array();
+            foreach ($attributes as $attributeName) {
+                $matchingConditions[] = "$attributeName LIKE :word";
+            }
+            $matchingCondition = '(' . implode(' OR ', $matchingConditions) . ')';
+            $this->where($matchingCondition, array('word' => "%$word%"));
+            //$this->where("CONCAT(".implode(',', $attributes).") LIKE :word", array('word' => "%$word%"));
+
         }
 
         return $this;
@@ -361,6 +382,14 @@ class Collection
             $retval = array_merge($retval, $join['collection']->buildAliasMap("$alias.$name"));
         }
 
+
+        /* Derived attributes */
+        foreach ($this->attributes as $attributeName => $attributeSource) {
+            if ($attributeSource != "NULL") {
+                $retval["$alias.$attributeName"] = '('.$this->translate($attributeSource, $retval).')';
+            }
+        }
+
         return $retval;
     }
 
@@ -369,7 +398,7 @@ class Collection
         return strtr($string, $aliasMap);
     }
 
-    private function buildSelect($alias = NULL, $aliasMap = NULL)
+    public function getSelect($alias = NULL, $aliasMap = NULL)
     {
         if ($alias == NULL) {
             $alias = get_class($this->entity);
@@ -418,7 +447,7 @@ class Collection
 
             $nestedCollection = clone($join['collection']);
             $nestedCollection->where = array();
-            $nestedSelect = $nestedCollection->buildSelect("$alias.$name", $aliasMap);
+            $nestedSelect = $nestedCollection->getSelect("$alias.$name", $aliasMap);
 
             $select->join($join['type'], $nestedSelect, $conditions);
         }
@@ -464,7 +493,7 @@ class Collection
             $this->whereKey($primaryKeyValue);
         }
 
-        $resultSet  = $this->db->select($this->buildSelect());
+        $resultSet  = $this->db->select($this->getSelect());
         $iterator   = $this->iterator == NULL ? $this->buildIterator() : $this->iterator;
         $iterator->setResultSet($resultSet);
 
@@ -477,12 +506,16 @@ class Collection
             return $iterator->first();
         }
 
+        foreach ($this->postFilters as $filter) {
+            $iterator->addPostFilter($filter);
+        }
+
         return $iterator;
     }
 
     public function count()
     {
-        $select = $this->buildSelect();
+        $select = $this->getSelect();
 
         return $this->db->count($select);
     }

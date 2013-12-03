@@ -19,7 +19,9 @@ class Iterator implements \Iterator
     private $fetchFirstRow;
     private $fetchAllPrefix;
 
-    public function __construct($className, $key, $fetchFirstRow = FALSE)
+    private $postFilters;
+
+    public function __construct($className, $key = NULL, $fetchFirstRow = FALSE)
     {
         $this->resultSet        = NULL;
         $this->className        = $className;
@@ -36,6 +38,8 @@ class Iterator implements \Iterator
 
         $this->fetchFirstRow    = $fetchFirstRow;
         $this->fetchAllPrefix   = array();
+
+        $this->postFilters      = array();
     }
 
     public function setResultSet($resultSet)
@@ -44,6 +48,17 @@ class Iterator implements \Iterator
         foreach ($this->nestedIterators as $nestedIterator) {
             $nestedIterator->setResultSet($resultSet);
         }
+
+        return $this;
+    }
+
+    public function addPostFilter($function)
+    {
+        if (!is_callable($function)) {
+            trigger_error("filter is not callable", E_USER_ERROR);
+        }
+
+        $this->postFilters[] = $function;
 
         return $this;
     }
@@ -100,6 +115,12 @@ class Iterator implements \Iterator
 
             $returnObject->$attributeName = $nestedIterator->fetchFirstRow ? $nestedIterator->first() : $nestedIterator;
         }
+
+        /* Apply postfilters */
+        foreach ($this->postFilters as $filter) {
+            $filter($returnObject);
+        }
+
 
         return $returnObject;
     }
@@ -172,6 +193,12 @@ class Iterator implements \Iterator
 
     function next()
     {
+        if (!$this->key) {
+            $this->resultSet->data_seek(++$this->pointer);
+            $this->currentRow = $this->resultSet->fetch_assoc();
+            return;
+        }
+
         //move forward until you get something different than the current row
         while ($this->currentRow !== NULL && $this->alreadySeen()) {
             $this->resultSet->data_seek(++$this->pointer);
