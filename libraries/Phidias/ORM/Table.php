@@ -101,9 +101,9 @@ class Table
         $this->getDB()->query("OPTIMIZE TABLE `$tableName`");
     }
 
-    public function create()
+    public function create($engine = 'InnoDB')
     {
-        $this->getDB()->create($this->table);
+        $this->getDB()->create($this->table, $engine);
 
         /* Create triggers */
         $tableName  = $this->map->getTable();
