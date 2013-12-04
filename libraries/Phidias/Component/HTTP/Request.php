@@ -21,9 +21,9 @@ class Request
         return isset($_POST[$name]) && !empty($_POST[$name]) ? $_POST[$name] : $onEmpty;
     }
 
-    public static function JSON($name = NULL, $onEmpty = NULL)
+    public static function JSON($name = NULL, $onEmpty = NULL, $asArray = FALSE)
     {
-        $incomingJSON = json_decode(file_get_contents('php://input'), true);
+        $incomingJSON = json_decode(file_get_contents('php://input'), $asArray);
         if (!$incomingJSON) {
             return NULL;
         }

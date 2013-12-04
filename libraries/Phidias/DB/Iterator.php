@@ -123,7 +123,6 @@ class Iterator implements \Iterator
             $filter($returnObject);
         }
 
-
         return $returnObject;
     }
 

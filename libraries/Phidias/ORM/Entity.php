@@ -72,6 +72,22 @@ class Entity
         }
     }
 
+    public function getPrimaryKeyValue()
+    {
+        $retval = array();
+        $map    = self::getMap();
+        foreach ($map->getKeys() as $attributeName) {
+            if (isset($this->$attributeName)) {
+                $retval[$attributeName] = $this->$attributeName;
+            } else {
+                return NULL;
+            }
+        }
+
+        return $retval;
+    }
+
+
     public function fetchAll()
     {
         $retval = clone($this);
@@ -149,7 +165,7 @@ class Entity
         }
 
         $retval = array();
-        foreach ($array as $element) {
+        foreach ((array)$array as $element) {
             if (is_array($element)) {
 
                 if (isset($element[$key])) {

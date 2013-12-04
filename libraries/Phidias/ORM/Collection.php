@@ -28,6 +28,8 @@ class Collection
     private $unitOfWork;
     private $updateValues;
 
+    /* Condition filters */
+    private $filters;
 
     public function __construct($entity, $hasOneElement = FALSE)
     {
@@ -55,6 +57,8 @@ class Collection
 
         $this->joinAsInner      = FALSE;
         $this->relationAlias    = NULL;
+
+        $this->filters          = array();
     }
 
     public function addPostFilter($filter)
@@ -154,21 +158,53 @@ class Collection
         return $this;
     }
 
-    public function equals($attributeName, $value)
+    public function match($attributeName, $value = NULL, $mongoOperator = '&eq')
     {
+        if (is_object($attributeName)) {
+            $this->matchObject($attributeName);
+            return $this;
+        }
+
         if ($value === NULL) {
+
             $this->where("$attributeName IS NULL");
+
+        } else if (is_scalar($value)) {
+
+            $queryOperator = Operator::getSQLOperator($mongoOperator);
+            $this->where("$attributeName $queryOperator :value", array('value' => $value));
+
         } else if (is_array($value)) {
 
-            if (count($value)) {
-                $this->where("$attributeName IN :value", array('value' => $value));
+            $targetArray = $this->normalizeArray($value);
+            if ($targetArray) {
+                $operator = $mongoOperator == '&nin' ? 'NOT IN' : 'IN';
+                $this->where("$attributeName IN :value", array('value' => $targetArray));
             }
 
-        } else {
-            $this->where("$attributeName = :value", array('value' => $value));
+        } else if ($value instanceof Entity && ($primaryKeyValue = $value->getPrimaryKeyValue()) && count($primaryKeyValue) == 1) {
+
+            $queryOperator = Operator::getSQLOperator($mongoOperator);
+            $this->where("$attributeName $queryOperator :value", array('value' => current($primaryKeyValue)));
+
         }
 
         return $this;
+    }
+
+    private function normalizeArray($array)
+    {
+        $targetArray = array();
+
+        foreach ($array as $element) {
+            if ($element instanceof Entity && ($primaryKeyValue = $element->getPrimaryKeyValue()) &&  count($primaryKeyValue) == 1) {
+                $targetArray[] = current($primaryKeyValue);
+            } else if (is_scalar($element)) {
+                $targetArray[] = $element;
+            }
+        }
+
+        return $targetArray;
     }
 
     public function search($query, $attributes)
@@ -192,96 +228,49 @@ class Collection
             }
             $matchingCondition = '(' . implode(' OR ', $matchingConditions) . ')';
             $this->where($matchingCondition, array('word' => "%$word%"));
-            //$this->where("CONCAT(".implode(',', $attributes).") LIKE :word", array('word' => "%$word%"));
         }
 
         return $this;
     }
 
-    public function filter($filter)
+    private function matchObject($object)
     {
-        $filterConditions = array();
+        $localFilter = new \stdClass;
 
-        foreach ((array)$filter as $attributeName => $filterData) {
+        foreach ($object as $attributeName => $value) {
 
-            if ($filterData === '') {
-                continue;
-            }
-
-            if (!is_array($filterData)) {
-                $filterConditions[] = $this->db->bindParameters("$attributeName = :value", array('value' => $filterData));
+            if (isset($this->joins[$attributeName]) && is_object($value) && !($value instanceof Entity && $value->getPrimaryKeyValue()) ) {
+                $this->joins[$attributeName]['collection']->matchObject($value);
             } else {
-                if ($parsed = $this->parseCondition($attributeName, $filterData)) {
-                    $filterConditions[] = $parsed;
-                }
+                $localFilter->$attributeName = $value;
             }
+
         }
 
-        if ($filterConditions) {
-            $this->where("(".implode(' AND ', $filterConditions).")");
-        }
+        $this->filters[] = $localFilter;
 
         return $this;
     }
 
-    private function parseCondition($attributeName, $filterData)
+    private function applyFilters($alias)
     {
-        $conditions = array();
-        foreach ($filterData as $operation => $value) {
-            switch ($operation) {
-                case '&gt':
-                    $conditions[] = $this->db->bindParameters("$attributeName > :value", array('value' => $value));
-                break;
+        foreach ($this->filters as $filter) {
+            foreach ($filter as $attributeName => $value) {
 
-                case '&gte':
-                    $conditions[] = $this->db->bindParameters("$attributeName >= :value", array('value' => $value));
-                break;
+                if ($value === NULL || (is_scalar($value) && !trim($value))) {
+                    continue;
+                }
 
-                case '&lt':
-                    $conditions[] = $this->db->bindParameters("$attributeName < :value", array('value' => $value));
-                break;
+                if (Operator::isOperator($value)) {
+                    $this->match("$alias.$attributeName", Operator::getValue($value), Operator::getOperator($value));
+                } else {
+                    $this->match("$alias.$attributeName", $value);
+                }
 
-                case '&lte':
-                    $conditions[] = $this->db->bindParameters("$attributeName <= :value", array('value' => $value));
-                break;
-
-                case '&in':
-                    $conditions[] = $this->db->bindParameters("$attributeName IN :value", array('value' => $value));
-                break;
-
-                case '&nin':
-                    $conditions[] = $this->db->bindParameters("$attributeName NOT IN :value", array('value' => $value));
-                break;
-
-                case '&ne':
-                    $conditions[] = $this->db->bindParameters("$attributeName != :value", array('value' => $value));
-                break;
-
-                case '&like':
-                    $conditions[] = $this->db->bindParameters("$attributeName LIKE :value", array('value' => $value));
-                break;
-
-
-                case '&or':
-                    $operands = array();
-                    foreach ($value as $condition) {
-                        $operands[] = $this->parseCondition($attributeName, $condition);
-                    }
-                    $conditions[] = '('.implode(' OR ', $operands).')';
-                break;
-
-                case '&and':
-                    $operands = array();
-                    foreach ($value as $condition) {
-                        $operands[] = $this->parseCondition($attributeName, $condition);
-                    }
-                    $conditions[] = '('.implode(' AND ', $operands).')';
-                break;
             }
         }
-
-        return $conditions ? '('.implode(' AND ', $conditions).')' : NULL;
     }
+
 
     public function useIndex($index)
     {
@@ -408,6 +397,8 @@ class Collection
         if ($aliasMap == NULL) {
             $aliasMap = $this->buildAliasMap($alias);
         }
+
+        $this->applyFilters($alias);
 
         $select = new \Phidias\DB\Select($this->map->getTable(), $alias);
 
