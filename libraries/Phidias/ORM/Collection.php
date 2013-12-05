@@ -247,6 +247,7 @@ class Collection
         $localFilter = new \stdClass;
 
         foreach ($object as $attributeName => $value) {
+
             if (isset($this->joins[$attributeName]) && is_object($value) && !($value instanceof Entity && $value->getPrimaryKeyValue()) ) {
                 $this->joins[$attributeName]['collection']->matchObject($value);
             } else {

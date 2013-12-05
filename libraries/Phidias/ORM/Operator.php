@@ -12,7 +12,7 @@ class Operator
         }
 
         foreach ($element as $attributeName => $value) {
-            if ( !in_array($attributeName, self::$operators) ) {
+            if ( !in_array($attributeName, self::$operators, TRUE) ) {
                 return FALSE;
             }
         }
