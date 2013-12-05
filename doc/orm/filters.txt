@@ -14,7 +14,7 @@ Podemos declarar un filtro de la siguiente manera:
 $filter = new stdClass;
 $filter->author->firstName = 'Santiago';
 
-$books->filter($filter);
+$books->match($filter);
 
 Will result in the following query:
 

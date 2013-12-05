@@ -5,13 +5,13 @@ class Operator
 {
     private static $operators = array('&gt', '&gte', '&lt', '&lte', '&in', '&nin', '&ne', '&eq', '&like', '&or', '&and');
 
-    public static function isOperator($array)
+    public static function isOperator($element)
     {
-        if (!is_array($array)) {
+        if (!is_array($element) && !is_object($element)) {
             return FALSE;
         }
 
-        foreach ($array as $attributeName => $value) {
+        foreach ($element as $attributeName => $value) {
             if ( !in_array($attributeName, self::$operators) ) {
                 return FALSE;
             }
@@ -20,14 +20,16 @@ class Operator
         return TRUE;
     }
 
-    public static function getValue($operation)
+    public static function getValue($element)
     {
-        return current($operation);
+        $array = (array)$element;
+        return current($array);
     }
 
-    public static function getOperator($operation)
+    public static function getOperator($element)
     {
-        return key($operation);
+        $array = (array)$element;
+        return key($array);
     }
 
     public static function getSQLOperator($operator)

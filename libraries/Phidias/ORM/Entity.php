@@ -47,7 +47,7 @@ class Entity
 
     public function setValues($values)
     {
-        if (!is_array($values)) {
+        if (!is_array($values) || !is_object($values)) {
             return;
         }
 
@@ -59,7 +59,7 @@ class Entity
                 continue;
             }
 
-            if ($map->hasRelation($attribute) && is_array($value)) {
+            if ($map->hasRelation($attribute) && (is_array($value)||is_object($value))) {
                 if (!($this->$attribute instanceof Entity)) {
                     $relationData = $map->getRelation($attribute);
                     $this->$attribute = new $relationData['entity'];
