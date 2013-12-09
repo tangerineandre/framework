@@ -36,6 +36,7 @@ class Select
     private $orderBy;
     private $limit;
     private $groupBy;
+    private $having;
 
     public function __construct($table, $alias = NULL)
     {
@@ -103,6 +104,13 @@ class Select
         return $this;
     }
 
+    public function having($value)
+    {
+        $this->having = $value;
+
+        return $this;
+    }
+
     public function orderBy($value = NULL)
     {
         if ($value === NULL) {
@@ -165,7 +173,7 @@ class Select
 
             $sqlQuery = "SELECT COUNT($countField) as count "."\n";
         } else {
-            $sqlQuery = "SELECT"."\n";
+            $sqlQuery = "SELECT "."\n";
             $allColumns = array();
             foreach ($this->fields as $columnAlias => $columnSource) {
                 $allColumns[] = $columnSource.' as `'.$columnAlias.'`';
@@ -173,23 +181,23 @@ class Select
             $sqlQuery .= implode(', '."\n", $allColumns)." \n";
         }
 
-        $sqlQuery .= "FROM"."\n";
+        $sqlQuery .= "FROM "."\n";
         $sqlQuery .= $this->table.' `'.$this->alias."`\n";
 
         if ($this->useIndex) {
-            $sqlQuery .= "USE INDEX(".implode(', ', $this->useIndex).")"."\n";
+            $sqlQuery .= "USE INDEX(".implode(', ', $this->useIndex).") "."\n";
         }
 
         foreach ($this->joinData as $joinData) {
-            $sqlQuery .= $joinData['type'].' JOIN '.$joinData['foreignTable'].' `'.$joinData['foreignAlias'].'` ON '.$joinData['joinCondition']."\n";
+            $sqlQuery .= $joinData['type'].' JOIN '.$joinData['foreignTable'].' `'.$joinData['foreignAlias'].'` ON '.$joinData['joinCondition']." \n";
         }
 
         if ($this->conditions) {
-            $sqlQuery .= 'WHERE ('.implode(') AND (', $this->conditions).")\n";
+            $sqlQuery .= 'WHERE ('.implode(') AND (', $this->conditions).") \n";
         }
 
         if ($this->groupBy && !$count) {
-            $sqlQuery .= "GROUP BY ".implode(', ', $this->groupBy)."\n";
+            $sqlQuery .= "GROUP BY ".implode(', ', $this->groupBy)." \n";
         }
 
         if ($this->orderBy && !$count) {
@@ -198,11 +206,15 @@ class Select
                 $orderBy[] = isset($this->fields[$fieldName]) ? $this->fields[$fieldName] : $fieldName;
             }
 
-            $sqlQuery .= "ORDER BY ".implode(', ', $orderBy)."\n";
+            $sqlQuery .= "ORDER BY ".implode(', ', $orderBy)." \n";
         }
 
         if ($this->limit !== NULL && !$count) {
-            $sqlQuery .= "LIMIT $this->limit"."\n";
+            $sqlQuery .= "LIMIT $this->limit"." \n";
+        }
+
+        if ($this->having !== NULL && !$count) {
+            $sqlQuery .= "HAVING $this->having"." \n";
         }
 
         return $sqlQuery;

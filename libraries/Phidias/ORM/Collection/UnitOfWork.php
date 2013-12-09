@@ -1,6 +1,8 @@
 <?php
 namespace Phidias\ORM\Collection;
 
+use Phidias\Core\Configuration;
+
 class UnitOfWork
 {
     private $attributes;
@@ -20,7 +22,7 @@ class UnitOfWork
         $this->db           = $db;
 
         $this->pile          = array();
-        $this->maxFlushSize  = 10000;
+        $this->maxFlushSize  = Configuration::get('orm.collection.maxFlushSize');
         $this->insertCount   = 0;
     }
 
