@@ -289,6 +289,10 @@ class Collection
         return $this;
     }
 
+    public function getNested($name)
+    {
+        return isset($this->joins[$name]) ? $this->joins[$name]['collection'] : NULL;
+    }
 
     private function nest($name, $type, $collection, $relationIdentifier = NULL, $identifierIsLocal = NULL)
     {
