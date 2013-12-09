@@ -209,12 +209,12 @@ class Select
             $sqlQuery .= "ORDER BY ".implode(', ', $orderBy)." \n";
         }
 
-        if ($this->limit !== NULL && !$count) {
-            $sqlQuery .= "LIMIT $this->limit"." \n";
-        }
-
         if ($this->having !== NULL && !$count) {
             $sqlQuery .= "HAVING $this->having"." \n";
+        }        
+        
+        if ($this->limit !== NULL && !$count) {
+            $sqlQuery .= "LIMIT $this->limit"." \n";
         }
 
         return $sqlQuery;
