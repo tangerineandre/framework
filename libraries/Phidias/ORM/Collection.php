@@ -504,7 +504,9 @@ class Collection
     /* Unions and intersections */
     public function union($collection)
     {
-        $newConditions      = array();
+        $collection->consolidateConditions();
+
+        $newConditions = array();
 
         if ($this->where) {
             $newConditions[] = '('.implode(' AND ', $this->where).')';
@@ -521,6 +523,8 @@ class Collection
 
     public function intersect($collection)
     {
+        $collection->consolidateConditions();
+
         $newConditions = array();
 
         if ($this->where) {
@@ -534,6 +538,15 @@ class Collection
         $this->where = $newConditions;
 
         return $this;
+    }
+
+    private function consolidateConditions()
+    {
+        foreach ($this->joins as $joinData) {
+            $joinData['collection']->consolidateConditions();
+            $this->where = array_merge($this->where, $joinData['collection']->where);
+            $joinData['collection']->where = array();
+        }
     }
 
 
