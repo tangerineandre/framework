@@ -504,38 +504,34 @@ class Collection
     /* Unions and intersections */
     public function union($collection)
     {
-        /* An union with a whole collection is always a whole collection */
-        if (!$this->where || !$collection->where) {
-            $this->where = array();
+        $newConditions      = array();
 
-            return $this;
+        if ($this->where) {
+            $newConditions[] = '('.implode(' AND ', $this->where).')';
         }
 
-        $newConditions      = array();
-        $newConditions[]    = '('.implode(' AND ', $this->where).')';
-        $newConditions[]    = '('.implode(' AND ', $collection->where).')';
+        if ($collection->where) {
+            $newConditions[] = '('.implode(' AND ', $collection->where).')';
+        }
 
-        $this->where        = array('('.implode(' OR ', $newConditions).')');
+        $this->where = array('('.implode(' OR ', $newConditions).')');
 
         return $this;
     }
 
     public function intersect($collection)
     {
-        /* And intersection with a whole collection is always the delimited collection */
-        if (!$collection->where) {
-            return $this;
+        $newConditions = array();
+
+        if ($this->where) {
+            $newConditions[] = '('.implode(' AND ', $this->where).')';
         }
 
-        if (!$this->where) {
-            return $collection;
+        if ($collection->where) {
+            $newConditions[] = '('.implode(' AND ', $collection->where).')';
         }
 
-        $newConditions      = array();
-        $newConditions[]    = '('.implode(' AND ', $this->where).')';
-        $newConditions[]    = '('.implode(' AND ', $collection->where).')';
-
-        $this->where        = array('('.implode(' AND ', $newConditions).')');
+        $this->where = $newConditions;
 
         return $this;
     }
