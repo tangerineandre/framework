@@ -159,29 +159,8 @@ class Map
 
         $this->keys = isset($array['keys']) ? $array['keys'] : array();
 
-        /* Map triggers */
-        $this->triggers['insert'] = isset($array['triggers']['insert']) ? $array['triggers']['insert'] : array();
-        if (!isset($this->triggers['insert']['before'])) {
-            $this->triggers['insert']['before'] = null;
-        }
-        if (!isset($this->triggers['insert']['after'])) {
-            $this->triggers['insert']['after'] = null;
-        }
-
-        $this->triggers['update'] = isset($array['triggers']['update']) ? $array['triggers']['update'] : array();
-        if (!isset($this->triggers['update']['before'])) {
-            $this->triggers['update']['before'] = null;
-        }
-        if (!isset($this->triggers['update']['after'])) {
-            $this->triggers['update']['after'] = null;
-        }
-
-        $this->triggers['delete'] = isset($array['triggers']['delete']) ? $array['triggers']['delete'] : array();
-        if (!isset($this->triggers['delete']['before'])) {
-            $this->triggers['delete']['before'] = null;
-        }
-        if (!isset($this->triggers['delete']['after'])) {
-            $this->triggers['delete']['after'] = null;
+        if (isset($array['triggers'])) {
+            $this->triggers = $array['triggers'];
         }
 
         if (isset($array['indexes'])) {

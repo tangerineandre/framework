@@ -104,32 +104,35 @@ class Table
     public function create($engine = 'InnoDB')
     {
         $this->getDB()->create($this->table, $engine);
+    }
 
-        /* Create triggers */
-        $tableName  = $this->map->getTable();
-        $triggers   = $this->map->getTriggers();
-        foreach ($triggers as $operation => $actions) {
-            foreach ($actions as $when => $code) {
+    public function createTriggers()
+    {
+        foreach ($this->map->getTriggers() as $tableName => $triggers) {
 
-                if (!$code) {
-                    continue;
+            foreach ($triggers as $operation => $actions) {
+                foreach ($actions as $when => $code) {
+
+                    if (!$code) {
+                        continue;
+                    }
+
+                    $triggerName = "{$tableName}_{$when}_{$operation}";
+
+                    $this->getDB()->query("DROP TRIGGER IF EXISTS `$triggerName`");
+                    $this->getDB()->query("CREATE TRIGGER `$triggerName` $when $operation ON `$tableName`
+                        FOR EACH ROW
+                        BEGIN
+                            IF (@DISABLE_TRIGGERS IS NULL) then
+                                $code
+                            END IF;
+                        END
+                    ");
+
                 }
-
-                $triggerName = "{$tableName}_{$when}_{$operation}";
-
-                $this->getDB()->query("DROP TRIGGER IF EXISTS `$triggerName`");
-                $this->getDB()->query("CREATE TRIGGER `$triggerName` $when $operation ON `$tableName`
-                    FOR EACH ROW
-                    BEGIN
-                        IF (@DISABLE_TRIGGERS IS NULL) then
-                            $code
-                        END IF;
-                    END
-                ");
-
             }
-        }
 
+        }
     }
 
 }

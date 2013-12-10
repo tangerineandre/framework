@@ -80,6 +80,12 @@ class Phidias_Orm_Controller extends Controller
                 $table = $entity::table();
                 $table->create();
             }
+
+            foreach ($organized as $entity) {
+                $table = $entity::table();
+                $table->createTriggers();
+            }
+
         } catch (Exception $e) {
             dumpx($e);
         }
