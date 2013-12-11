@@ -504,6 +504,7 @@ class Collection
     /* Unions and intersections */
     public function union($collection)
     {
+        $this->consolidateConditions();
         $collection->consolidateConditions();
 
         $newConditions = array();
@@ -523,6 +524,7 @@ class Collection
 
     public function intersect($collection)
     {
+        $this->consolidateConditions();
         $collection->consolidateConditions();
 
         $newConditions = array();
