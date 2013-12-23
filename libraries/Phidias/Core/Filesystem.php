@@ -3,6 +3,16 @@ namespace Phidias\Core;
 
 class Filesystem
 {
+    public static function isFile($filename)
+    {
+        return is_file($filename);
+    }
+
+    public static function isDirectory($filename)
+    {
+        return is_dir($filename);
+    }
+
     public static function listDirectory($directory, $list_files = TRUE, $list_directories = TRUE)
     {
         if ( !is_dir($directory) ) {

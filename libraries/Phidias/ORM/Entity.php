@@ -45,7 +45,7 @@ class Entity
         $this->_id = NULL;
     }
 
-    public function setValues($values)
+    public function setValues($values, $acceptedAttributes = NULL)
     {
         if (!is_array($values) && !is_object($values)) {
             return;
@@ -56,6 +56,10 @@ class Entity
         foreach ($values as $attribute => $value) {
 
             if (!$map->hasAttribute($attribute)) {
+                continue;
+            }
+
+            if ($acceptedAttributes !== NULL && !in_array($attribute, $acceptedAttributes, true)) {
                 continue;
             }
 

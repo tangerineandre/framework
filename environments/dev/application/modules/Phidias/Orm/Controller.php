@@ -60,28 +60,44 @@ class Phidias_Orm_Controller extends Controller
 
     public function install()
     {
-        $environmentStack = Environment::getStack();
+        $environmentStack   = Environment::getStack();
+        $entitiesDirectory  = $environmentStack[0].'/application/modules/';
+        $prefix             = $this->attributes->get('prefix');
+
+        if (!Filesystem::isDirectory($entitiesDirectory)) {
+            throw new \Exception("'$entitiesDirectory' not found");
+        }
 
         $entities = array();
-        $this->findEntities($entities, $environmentStack[0].'/application/modules');
+        $this->findEntities($entities, $entitiesDirectory);
         $organized = array();
 
         foreach (array_keys($entities) as $entityName) {
             $this->organizeEntity($entityName, $entities, $organized);
         }
 
-        foreach (array_reverse($organized) as $entity) {
+        $targetEntities = $organized;
+
+        if ($prefix) {
+            foreach ($targetEntities as $key => $className) {
+                if (stripos($className, $prefix) !== 0) {
+                    unset($targetEntities[$key]);
+                }
+            }
+        }
+
+        foreach (array_reverse($targetEntities) as $entity) {
             $table = $entity::table();
             $table->drop();
         }
 
         try {
-            foreach ($organized as $entity) {
+            foreach ($targetEntities as $entity) {
                 $table = $entity::table();
                 $table->create();
             }
 
-            foreach ($organized as $entity) {
+            foreach ($targetEntities as $entity) {
                 $table = $entity::table();
                 $table->createTriggers();
             }
