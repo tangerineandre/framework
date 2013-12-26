@@ -32,7 +32,13 @@ class Request
             return $incomingJSON;
         }
 
-        return isset($incomingJSON[$name]) ? $incomingJSON[$name] : $onEmpty;
+        if ($asArray) {
+            return isset($incomingJSON[$name]) ? $incomingJSON[$name] : $onEmpty;
+        } else {
+            return isset($incomingJSON->$name) ? $incomingJSON->$name : $onEmpty;
+        }
+
+
     }
 
     public static function header($name = NULL)

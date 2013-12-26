@@ -17,6 +17,7 @@ class Collection
     private $limit;
 
     private $postFilters;
+    private $preFilters;
 
     private $map;
     private $db;
@@ -47,6 +48,7 @@ class Collection
         $this->limit            = NULL;
 
         $this->postFilters      = array();
+        $this->preFilters       = array();
 
         $this->map              = $this->entity->getMap();
         $this->db               = \Phidias\DB::connect($this->map->getDB());
@@ -69,6 +71,13 @@ class Collection
                 $join['collection']->setAlias("$alias.$joinName", TRUE);
             }
         }
+    }
+
+    public function addPreFilter($filter)
+    {
+        $this->preFilters[] = $filter;
+
+        return $this;
     }
 
     public function addPostFilter($filter)
@@ -558,7 +567,7 @@ class Collection
     public function add($entity)
     {
         if ($this->unitOfWork === NULL) {
-            $this->unitOfWork = new Collection\UnitOfWork($this->attributes, $this->joins, $this->map, $this->db);
+            $this->unitOfWork = new Collection\UnitOfWork($this->attributes, $this->joins, $this->map, $this->db, $this->preFilters);
         }
 
         $this->unitOfWork->add($entity);
@@ -566,9 +575,9 @@ class Collection
         return $this;
     }
 
-    public function save($entity = NULL)
+    public function save($incomingEntity = NULL)
     {
-        if ($entity === NULL) {
+        if ($incomingEntity === NULL) {
             return $this->unitOfWork === NULL ? NULL : $this->unitOfWork->save();
         }
 
@@ -577,6 +586,13 @@ class Collection
          * which attributes and nested entities should be
          * inserted or updated
          */
+        $entity = clone($incomingEntity);
+
+        /* Apply pre-filters */
+        foreach ($this->preFilters as $filter) {
+            $filter($entity);
+        }
+
         $values = array();
         foreach (array_keys($this->attributes) as $attributeName) {
             $columnName = $this->map->getColumn($attributeName);
@@ -619,7 +635,7 @@ class Collection
                 $newID[] = $this->db->getInsertID();
             }
         }
-        $entity->setID($newID);
+        $incomingEntity->setID($newID);
 
         return array_pop($newID);
     }
@@ -650,15 +666,15 @@ class Collection
 
     public function update($force = FALSE)
     {
-        if (!$this->selectWhere && !$force) {
+        if (!$this->where && !$force) {
             trigger_error("attempt to update ignored because no conditions are defined.  If you wish to update the entire collection invoke update(TRUE)");
             return 0;
         }
 
-        if ($this->selectWhere) {
+        if ($this->where) {
             $aliasMap           = $this->buildAliasMap();
             $updateConditions   = array();
-            foreach($this->selectWhere as $where) {
+            foreach($this->where as $where) {
                 $updateConditions[] = $this->translate($where, $aliasMap);
             }
             $updateCondition = implode(' AND ', $updateConditions);

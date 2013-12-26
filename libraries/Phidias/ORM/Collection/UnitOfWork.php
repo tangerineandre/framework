@@ -14,7 +14,9 @@ class UnitOfWork
     private $maxFlushSize;
     private $insertCount;
 
-    public function __construct($attributes, $joins, $map, $db)
+    private $preFilters;
+
+    public function __construct($attributes, $joins, $map, $db, $prefilters = array())
     {
         $this->attributes   = $attributes;
         $this->joins        = $joins;
@@ -24,6 +26,8 @@ class UnitOfWork
         $this->pile          = array();
         $this->maxFlushSize  = Configuration::get('orm.collection.maxFlushSize');
         $this->insertCount   = 0;
+
+        $this->preFilters    = $prefilters;
     }
 
     public function clear()
@@ -59,6 +63,11 @@ class UnitOfWork
         $record = array();
 
         $object = (array)$object;
+
+        /* Apply pre-filters */
+        foreach ($this->preFilters as $filter) {
+            $filter($object);
+        }
 
         /* Resolve nestings */
         foreach ($this->joins as $attributeName => $joinData) {
