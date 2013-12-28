@@ -22,7 +22,12 @@ class Phidias_Orm_Controller extends Controller
             }
 
             $object = new $classname;
-            $map    = $object->getMap();
+            
+            if (!$object instanceof \Phidias\ORM\Entity) {
+                continue;
+            }
+            
+            $map = $object->getMap();
 
             $relations = array();
             foreach ($map->getRelations() as $relationData) {
