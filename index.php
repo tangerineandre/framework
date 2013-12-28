@@ -6,7 +6,9 @@ $classLoader->register();
 use Phidias\Core\Debug;
 use Phidias\Core\Environment;
 use Phidias\Core\Application;
+use Phidias\Core\Configuration;
 use Phidias\Component\ExceptionHandler;
+use Phidias\Component\HTTP\Request;
 
 if (isset($_GET['__debug'])) {
     Debug::enable();
@@ -17,7 +19,14 @@ Environment::initialize();
 try {
 
     Application::initialize();
-    echo Application::execute();
+
+    $resource   = Request::GET('_a', Configuration::get('controller.default'));
+    $attributes = Request::GET();
+    unset($attributes['_a']);
+    Debug::add("using default resource: $resource");
+
+    echo Application::run($resource, $attributes);
+
     Application::finalize();
 
 } catch ( Exception $e ) {

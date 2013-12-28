@@ -1,7 +1,6 @@
 <?php
 namespace Phidias\Core;
 
-use Phidias\Component\HTTP\Request;
 
 /* Possible exceptions */
 class Application_ResourceNotFound_Exception extends \Exception {
@@ -20,7 +19,6 @@ class Application
     private static $_depth  = -1;
     private static $_stack  = array();
     private static $_layout = FALSE;
-    private static $_hooks  = array();
 
     public static function initialize()
     {
@@ -30,11 +28,6 @@ class Application
             Debug::startBlock("including initialization file '$initializationFile'", 'include');
             include $initializationFile;
             Debug::endBlock();
-        }
-
-        $postExecuteHooks = Configuration::get('controller.hooks.postExecute');
-        if ( $postExecuteHooks ) {
-            self::$_hooks['postExecute'] = $postExecuteHooks;
         }
 
         Debug::endBlock();
@@ -63,17 +56,6 @@ class Application
     private static function sanitize($resource)
     {
         return rtrim($resource,'/');
-    }
-
-
-    public static function execute()
-    {
-        $resource   = Request::GET('_a', Configuration::get('controller.default'));
-        $attributes = Request::GET();
-        unset($attributes['_a']);
-        Debug::add("using default resource: $resource");
-
-        return self::run($resource, $attributes);
     }
 
     public static function run($resource, $attributes = NULL)
@@ -159,32 +141,6 @@ class Application
 
         Debug::endBlock();
 
-
-        /* run postExecute hooks */
-        if ( isset(self::$_hooks['postExecute']) ) {
-            Debug::startBlock("executing hooks");
-
-            foreach( self::$_hooks['postExecute'] as $postControlBaseClass ) {
-
-                $postControlClass   = str_replace('_Controller', "_$postControlBaseClass", $class);
-
-                if ( !class_exists($postControlClass) ) {
-                    continue;
-                }
-
-                $postControlObject  = new $postControlClass($controllerObject);
-                $postControlCall    = array($postControlObject, $method);
-
-                if ( is_callable($postControlCall) ) {
-                    Debug::add("invoking $postControlClass->$method()");
-                    call_user_func_array( $postControlCall, $arguments );
-                } else {
-                    Debug::add("$postControlClass->$method() is not callable");
-                }
-            }
-
-            Debug::endBlock();
-        }
 
         $output = ob_get_contents();
         ob_end_clean();
