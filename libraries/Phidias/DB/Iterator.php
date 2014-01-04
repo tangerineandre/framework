@@ -254,6 +254,11 @@ class Iterator implements \Iterator
         return $retval;
     }
 
+    public function getNumRows()
+    {
+        return $this->resultSet !== NULL ? $this->resultSet->num_rows : NULL;
+    }
+
     public function toArray()
     {
         return (array)$this->fetchAll();

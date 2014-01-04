@@ -63,7 +63,7 @@ class Environment
         /* Include configuration */
         Debug::startBlock('including configuration files');
         $configurations = self::listDirectory(self::DIR_CONFIGURATION, TRUE, FALSE);
-        foreach ( $configurations as $file ) {
+        foreach ($configurations as $file) {
 
             /* Ignore configuration files prefixed with "_" */
             if ( substr($file['name'],0,1) == '_') {
@@ -102,7 +102,6 @@ class Environment
             Application::setLayout($layout);
         }
 
-
         /* Set appropiate response format */
         if ( Request::getBestSupportedMimeType(array('application/json', 'application/javascript')) ) {
             Application::setLayout(FALSE);
@@ -112,11 +111,11 @@ class Environment
 
         /* Configured component aliases */
         $componentAliases = Configuration::getAll('component.');
-        foreach ( $componentAliases as $componentClass => $targetClass ) {
+        foreach ($componentAliases as $componentClass => $targetClass) {
             class_alias($targetClass, "Phidias\Component\\".$componentClass);
         }
 
-        if ( $languageCode = Configuration::get('application.language') ) {
+        if ($languageCode = Configuration::get('application.language')) {
             Debug::startBlock("loading language '$languageCode'");
             Language::setCode($languageCode);
             $dictionaries = self::listDirectory(self::DIR_LANGUAGES."/$languageCode", TRUE, FALSE);
@@ -131,10 +130,8 @@ class Environment
 
         /* Set up routing */
         $routes = self::listFileOccurrences(self::DIR_CONTROL.'/routes.php');
-        foreach ( $routes as $routeFile ) {
-            Debug::startBlock("including routing file '$routeFile'", 'include');
-            Route::load(include $routeFile);
-            Debug::endBlock();
+        foreach ($routes as $routeFile) {
+            include $routeFile;
         }
 
 

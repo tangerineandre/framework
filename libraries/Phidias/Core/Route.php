@@ -1,76 +1,146 @@
 <?php
+/*
+Routing component
+
+Route::addRule($resourcePattern, $method, $class, $method, $additionalArguments)
+
+e.g.
+Route::addRule('groups/roles', NULL, 'Person_Role_Controller', 'collection');
+
+
+
+
+Route matching should be as fast as possible.  To do this we will have a pattern index, like this:
+
+Suppose the following routes are added:
+
+people/:personID        -> Person_Controller::details()
+people/foo              -> Person_Controller::foo()
+people/bar              -> Person_Controller::bar()
+people/bar/shoo         -> Person_Controller::shoo()
+groups                  -> Group_Controller::collection()
+groups/:groupID         -> Group_Controller::details()
+
+The following index is created internally:
+
+index = array(
+
+    'people' => array(
+        ':argument' => array(
+            'method:*' => [invocable]
+        ),
+
+        'foo' => array(
+            'method:*' => [invocable]
+        ),
+
+        'bar' => array(
+            'method:*' => [invocable]
+
+            'shoo' => array(
+                'method:*' => [invocable]
+            )
+        )
+    )
+
+
+);
+
+
+
+
+
+*/
+
 namespace Phidias\Core;
 
 class Route
 {
-    private static $index;
+    private static $index = array();
 
-    public static function load($routes)
+    /* Determine the invocable (class, method and arguments) corresponding to the given resource and request method */
+    public static function controller($resource, $requestMethod = NULL)
     {
-        self::$index = array();
+        $matchedUsingPattern = self::matchResource($resource, $requestMethod);
 
-        foreach ($routes as $resource => $controllerData) {
-            $parts = explode('/', $resource);
-            $path =& self::$index;
-
-            foreach ($parts as $part) {
-
-                if (substr($part, 0, 1) == ':') {
-                    $part = ':argument';
-                }
-
-                if (!isset($path[$part])) {
-                    $path[$part] = array();
-                }
-                $path =& $path[$part];
-            }
-
-            $path['_controller'] = $controllerData;
-        }
+        return $matchedUsingPattern ? $matchedUsingPattern : self::matchName($resource, $requestMethod);
     }
 
-    private static function parseRoute($resource, $requestMethod = 'get')
+    public static function addResource($requestMethod, $resourcePattern, $controllerClass, $controllerMethod, $additionalArguments = array())
     {
-        $parts      = explode('/', $resource);
-        $arguments  = array();
-        $path       = self::$index;
+        $currentIndex   = &self::$index;
+        $parts          = explode('/', $resourcePattern);
         foreach ($parts as $part) {
-            if (isset($path[$part])) {
-                $path = $path[$part];
-            } else if (isset($path[':argument'])) {
-                $arguments[] = $part;
-                $path = $path[':argument'];
-            } else {
-                return false;
-            }
-        }
 
-        if (isset($path['_controller'])) {
-            $class          = $path['_controller'][0];
-            $method         = $path['_controller'][1];
-            $fixedArguments = isset($path['_controller'][2]) ? $path['_controller'][2] : array();
-
-            if ( is_callable(array($class, $method.'_'.$requestMethod)) ) {
-                $method = $method.'_'.$requestMethod;
+            if (substr($part, 0, 1) == ':') {
+                $part = ':argument';
             }
 
-            return array($resource, $class, $method, array_merge($arguments, $fixedArguments));
+            if (!isset($currentIndex[$part])) {
+                $currentIndex[$part] = array();
+            }
+
+            $currentIndex = &$currentIndex[$part];
         }
 
-        return false;
+        $currentIndex['method:'.$requestMethod] = array(
+            'class'     => $controllerClass,
+            'method'    => $controllerMethod,
+            'arguments' => $additionalArguments
+        );
     }
 
-    public static function controller($resource, $requestMethod = 'get')
-    {
-        Debug::startBlock("mapping to '$resource' using route definitions");
-        $parsed = self::parseRoute($resource, $requestMethod);
-        Debug::endBlock();
 
-        if ($parsed) {
-            return $parsed;
+    private static function matchResource($resource, $requestMethod = NULL)
+    {
+        $currentIndex       = self::$index;
+        $parts              = explode('/', $resource);
+        $matchedArguments   = array();
+
+        foreach ($parts as $part) {
+
+            if (isset($currentIndex[$part])) {
+                $currentIndex = $currentIndex[$part];
+                continue;
+            }
+
+            if (isset($currentIndex[':argument'])) {
+                $matchedArguments[] = $part;
+                $currentIndex       = $currentIndex[':argument'];
+                continue;
+            }
+
+            return NULL;
         }
 
+        if ($requestMethod === NULL) {
+            $requestMethod = '*';
+        }
 
+        if (isset($currentIndex['method:'.$requestMethod])) {
+
+            $retval = $currentIndex['method:'.$requestMethod];
+
+        } else if (isset($currentIndex['method:*'])) {
+
+            $retval = $currentIndex['method:*'];
+            if (is_callable(array($retval['class'], $retval['method'].'_'.$requestMethod))) {
+                $retval['method'] = $retval['method'].'_'.$requestMethod;
+            }
+
+        } else {
+            return NULL;
+        }
+
+        $retval['arguments'] = array_merge($matchedArguments, $retval['arguments']);
+
+        return $retval;
+    }
+
+
+    /* Finds invocable via name matching (i.e. GET some/resource => Some_Controller::resource_get()  */
+    public static function matchName($resource, $requestMethod = 'get')
+    {
         Debug::startBlock("mapping to '$resource' using naming conventions");
 
         $parts              = explode('/', $resource);
@@ -139,26 +209,34 @@ class Route
             if ( !is_callable(array($class, $method)) ) {
                 Debug::add("route for '$resource' not found");
                 Debug::endBlock();
-                return FALSE;
+                return NULL;
             }
         }
 
         Debug::add("routed as $class->$method()");
         Debug::endBlock();
-        return array($controller, $class, $method, array_reverse($arguments));
+
+        return array(
+            'class'     => $class,
+            'method'    => $method,
+            'arguments' => array_reverse($arguments)
+        );
+
     }
 
-    public static function template($resource, &$fileSource = NULL)
+    public static function template($templateResource, &$fileSource = NULL)
     {
         if (($languageCode = Language::getCode()) && Configuration::get('route.template.prefixLanguage')) {
-            $targetFile = Environment::DIR_VIEWS."/".Configuration::get('view.format', 'html')."/".$languageCode."/$resource.".Configuration::get('view.extension', 'php');
-            $retval = Environment::findFile($targetFile, $fileSource);
+
+            $targetFile = Environment::DIR_VIEWS."/".Configuration::get('view.format', 'html')."/".$languageCode."/$templateResource.".Configuration::get('view.extension', 'php');
+            $retval     = Environment::findFile($targetFile, $fileSource);
             if ($retval) {
                 return $retval;
             }
+
         }
 
-        $targetFile = Environment::DIR_VIEWS."/".Configuration::get('view.format', 'html')."/$resource.".Configuration::get('view.extension', 'php');
+        $targetFile = Environment::DIR_VIEWS."/".Configuration::get('view.format', 'html')."/$templateResource.".Configuration::get('view.extension', 'php');
         return Environment::findFile($targetFile, $fileSource);
     }
 

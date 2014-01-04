@@ -1,18 +1,8 @@
 <?php
 namespace Phidias\Core;
 
+use \Phidias\Component\Authorization;
 
-/* Possible exceptions */
-class Application_ResourceNotFound_Exception extends \Exception {
-
-    public function __construct($message = NULL, $code = NULL, $previous = NULL) {
-        \Phidias\Component\HTTP\Response::code(404);
-        parent::__construct($message, $code, $previous);
-    }
-
-}
-
-class Application_WrongArgumentCount_Exception extends \Exception {}
 
 class Application
 {
@@ -24,7 +14,7 @@ class Application
     {
         Debug::startBlock('initializing application');
 
-        foreach ( Environment::listFileOccurrences(Environment::DIR_CONTROL."/initialize.php") as $initializationFile ) {
+        foreach (Environment::listFileOccurrences(Environment::DIR_CONTROL."/initialize.php") as $initializationFile) {
             Debug::startBlock("including initialization file '$initializationFile'", 'include');
             include $initializationFile;
             Debug::endBlock();
@@ -58,7 +48,7 @@ class Application
         return rtrim($resource,'/');
     }
 
-    public static function run($resource, $attributes = NULL)
+    public static function run($resource, $requestMethod = NULL, $attributes = NULL)
     {
         $resource = self::sanitize($resource);
 
@@ -72,7 +62,7 @@ class Application
         self::$_stack[self::$_depth] = array($resource, $attributes);
 
         try {
-            $output = self::dispatch($resource, $attributes);
+            $output = self::dispatch($resource, $requestMethod, $attributes);
         } catch (\Exception $e) {
             $output = ExceptionHandler::handle($e);
         }
@@ -98,20 +88,27 @@ class Application
         return $output;
     }
 
-    private static function dispatch($resource, $attributes = NULL)
+    private static function dispatch($resource, $requestMethod = NULL, $attributes = NULL)
     {
         /* get associated resource data */
-        list($controller, $class, $method, $arguments) = Route::controller($resource, isset($_SERVER['REQUEST_METHOD']) ? strtolower($_SERVER['REQUEST_METHOD']) : 'get');
+        $invocable = Route::controller($resource, $requestMethod);
 
         /* not found */
-        if ( !isset($controller) ) {
-            throw new Application_ResourceNotFound_Exception("$resource not found");
+        if ($invocable === NULL) {
+            throw new Application\Exception\ResourceNotFound("$resource not found");
         }
 
         Debug::startBlock("executing resource: $resource", 'resource');
 
+        $class      = $invocable['class'];
+        $method     = $invocable['method'];
+        $arguments  = $invocable['arguments'];
 
-        /* authorization [coming soon]*/
+
+        /* authorization */
+        if (!Authorization::authorized($class, $method, $arguments)) {
+            throw new Application\Exception\Unauthorized("access to '$resource' denied");
+        }
 
         /* cache [coming soon] */
 
@@ -122,13 +119,13 @@ class Application
         $requiredArgumentCount    = $controllerReflection->getNumberOfRequiredParameters();
         $incomingArgumentCount    = count($arguments);
 
-        if ( ($incomingArgumentCount < $requiredArgumentCount) || ($incomingArgumentCount > $argumentCount ) ) {
-            throw new Application_WrongArgumentCount_Exception("$class->$method() expects $requiredArgumentCount arguments");
+        if (($incomingArgumentCount < $requiredArgumentCount) || ($incomingArgumentCount > $argumentCount )) {
+            throw new Application\Exception\WrongArgumentCount("$class->$method() expects $requiredArgumentCount arguments");
         }
 
-        /* execute controller */
-        ob_start();
 
+        /* execute invocable */
+        ob_start();
 
         $languagePreviousSource = Language::getCurrentSource();
         $controllerSource       = Environment::findSource($controllerReflection->getFileName());
@@ -154,17 +151,28 @@ class Application
         $viewData   = $controllerObject->getViewData();
         $template   = $viewData->getTemplate();
 
-        if ( $template !== FALSE) {
+        if ($template !== FALSE) {
 
             if ( $template === NULL ) {
-                $template = $controller;
+
+                /* When no template is specified, determine the template from the invocable like so:
+                 *
+                 * Person_Controller::collection()  ->  person/collection
+                 * Foo_Man_Controller::main()       ->  foo/man
+                 * Foo_Man_Controller::shoo()       ->  foo/man/shoo
+                 *
+                */
+
+                $basename = str_replace('_', '/', str_replace('_Controller', '', $class));
+                $template = strtolower($method == 'main' ? $basename : $basename.'/'.$method);
             }
 
             $templateFileSource = NULL;
             $templateFile       = Route::template($template, $templateFileSource);
 
-            if ( $templateFile ) {
-                if ( $output ) {
+            if ($templateFile) {
+
+                if ($output) {
                     trigger_error("'$resource' sent output before invoking view: ".$output);
                 }
 
@@ -172,7 +180,7 @@ class Application
                 $languagePreviousSource = Language::getCurrentSource();
                 Language::useSource($templateFileSource);
 
-                $view = new View( Environment::getPublicURL($templateFileSource) );
+                $view = new View(Environment::getPublicURL($templateFileSource));
                 $view->setAttributes($attributes);
                 $view->assign($variables);
                 $output = $view->fetch($templateFile);
@@ -185,7 +193,7 @@ class Application
             }
 
 
-        } else if ( $variables ) {
+        } else if ($variables) {
             trigger_error("Ignoring variables assigned from '$resource'");
         }
 

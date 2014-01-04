@@ -23,7 +23,7 @@ class Configuration
 
     public static function get($variable, $default_value = NULL, $source = NULL)
     {
-        if ( $source ) {
+        if ($source) {
             dumpx(debug_backtrace());
             dump($variable);
             dumpx($source);
@@ -39,7 +39,7 @@ class Configuration
 
     public static function set($variable, $value, $source = NULL)
     {
-        if ( $source ) {
+        if ($source) {
             if ( !isset(self::$sources[$source]) ) {
                 self::$sources[$source] = array();
             }
@@ -51,13 +51,13 @@ class Configuration
 
     public static function getAll($prefix = NULL)
     {
-        if ( $prefix ) {
+        if ($prefix) {
 
             $retval = array();
             $len    = strlen($prefix);
 
-            foreach ( self::$variables as $name => $value ) {
-                if ( substr($name, 0, $len) == $prefix ) {
+            foreach (self::$variables as $name => $value) {
+                if (substr($name, 0, $len) == $prefix) {
                     $retval[substr($name,$len)] = $value;
                 }
             }

@@ -18,15 +18,13 @@ Environment::initialize();
 
 try {
 
-    Application::initialize();
-
-    $resource   = Request::GET('_a', Configuration::get('controller.default'));
-    $attributes = Request::GET();
+    $resource       = Request::GET('_a', Configuration::get('controller.default'));
+    $requestMethod  = isset($_SERVER['REQUEST_METHOD']) ? strtolower($_SERVER['REQUEST_METHOD']) : 'get';
+    $attributes     = Request::GET();
     unset($attributes['_a']);
-    Debug::add("using default resource: $resource");
 
-    echo Application::run($resource, $attributes);
-
+    Application::initialize();
+    echo Application::run($resource, $requestMethod, $attributes);
     Application::finalize();
 
 } catch ( Exception $e ) {
