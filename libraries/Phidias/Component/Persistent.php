@@ -5,7 +5,7 @@ use Phidias\Component\Session;
 
 class Persistent
 {
-    private $clearing;
+    private $preventPersistence;
 
     private static $singleton;
 
@@ -31,7 +31,7 @@ class Persistent
 
     public function __destruct()
     {
-        if ($this->clearing) {
+        if ($this->preventPersistence) {
             return;
         }
 
@@ -48,6 +48,6 @@ class Persistent
     public function clear()
     {
          Session::clear('persistent_component:'.get_called_class());
-         $this->clearing = true;
+         $this->preventPersistence = true;
     }
 }

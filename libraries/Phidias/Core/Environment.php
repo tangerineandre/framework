@@ -1,7 +1,7 @@
 <?php
 namespace Phidias\Core;
 
-use Phidias\Component\HTTP\Request;
+use Phidias\Core\HTTP\Request;
 
 class Environment
 {

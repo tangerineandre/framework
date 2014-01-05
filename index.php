@@ -8,7 +8,7 @@ use Phidias\Core\Environment;
 use Phidias\Core\Application;
 use Phidias\Core\Configuration;
 use Phidias\Component\ExceptionHandler;
-use Phidias\Component\HTTP\Request;
+use Phidias\Core\HTTP\Request;
 
 if (isset($_GET['__debug'])) {
     Debug::enable();

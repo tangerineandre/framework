@@ -1,8 +1,8 @@
 <?php
 use Phidias\Core\Controller;
 use Phidias\Component\Navigation;
-use Phidias\Component\Form;
-use Phidias\Component\Form\Field;
+use Phidias\Util\Form;
+use Phidias\Util\Form\Field;
 
 class Phidias_Samples_Forms_Controller extends Controller
 {

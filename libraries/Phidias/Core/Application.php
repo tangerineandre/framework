@@ -1,8 +1,9 @@
 <?php
 namespace Phidias\Core;
 
+use \Phidias\Component\View;
 use \Phidias\Component\Authorization;
-
+use \Phidias\Component\ExceptionHandler;
 
 class Application
 {
