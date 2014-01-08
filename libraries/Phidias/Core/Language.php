@@ -3,22 +3,19 @@ namespace Phidias\Core;
 
 class Language
 {
-    private static $code        = NULL;
-    private static $dictionary  = array();
-    private static $sources     = array();
+    private static $code            = NULL;
+    private static $words           = array();
+    private static $currentContext  = NULL;
 
-    private static $_currentSource  = NULL;
-
-    public static function useSource($source)
+    public static function useContext($source)
     {
-        self::$_currentSource   = $source;
+        self::$currentContext = $source;
     }
 
-    public static function getCurrentSource()
+    public static function getCurrentContext()
     {
-        return self::$_currentSource;
+        return self::$currentContext;
     }
-
 
     public static function setCode($code)
     {
@@ -30,27 +27,25 @@ class Language
         return self::$code;
     }
 
-    public static function get($word)
+    public static function set($words, $context = NULL)
     {
-        if (self::$_currentSource !== NULL && isset(self::$sources[self::$_currentSource][$word])) {
-            return self::$sources[self::$_currentSource][$word];
+        if ($context === NULL) {
+            $context = self::$currentContext;
         }
 
-        return isset(self::$dictionary[$word]) ? self::$dictionary[$word] : $word;
+        $contextIndex = self::$currentContext !== NULL ? self::$currentContext : 'default';
+
+        if (!isset(self::$words[$contextIndex])) {
+            self::$words[$contextIndex] = $words;
+        } else {
+            self::$words[$contextIndex] = array_merge(self::$words[$contextIndex], $words);
+        }
     }
 
-    public static function load($file, $source = NULL)
+    public static function get($word)
     {
-        $words = include $file;
+        $contextIndex = self::$currentContext !== NULL ? self::$currentContext : 'default';
 
-        if ($source !== NULL) {
-            if (!isset(self::$sources[$source])) {
-                self::$sources[$source] = $words;
-            } else {
-                self::$sources[$source] = array_merge(self::$sources[$source], $words);
-            }
-        }
-
-        self::$dictionary = array_merge(self::$dictionary, $words);
+        return isset(self::$words[$contextIndex][$word]) ? self::$words[$contextIndex][$word] : $word;
     }
 }

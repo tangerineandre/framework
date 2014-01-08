@@ -5,7 +5,7 @@ class Request
 {
     public static function GET($name = FALSE, $onEmpty = NULL)
     {
-        if ( !$name ) {
+        if (!$name) {
             return $_GET;
         }
 
@@ -14,7 +14,7 @@ class Request
 
     public static function POST($name = FALSE, $onEmpty = NULL)
     {
-        if ( !$name ) {
+        if (!$name) {
             return $_POST;
         }
 
@@ -41,10 +41,18 @@ class Request
 
     }
 
+    /* Return the value for the specified header */
     public static function header($name = NULL)
     {
         $headers = getallheaders();
         return isset($headers[$name]) ? $headers[$name] : NULL;
+    }
+
+    /* Return the current request method */
+    public static function method()
+    {
+        $method = filter_input(INPUT_SERVER, 'REQUEST_METHOD');
+        return $method !== NULL ? strtolower($method) : 'get';
     }
 
     /* As suggested in http://stackoverflow.com/questions/1049401/how-to-select-content-type-from-http-accept-header-in-php */

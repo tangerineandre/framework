@@ -3,7 +3,6 @@ namespace Phidias\Component;
 
 use Phidias\Core\Environment;
 use Phidias\Core\Debug;
-use Phidias\Core\View;
 use Phidias\Core\Configuration;
 
 class ExceptionHandler implements ExceptionHandler_Interface

@@ -1,6 +1,8 @@
 <?php
 namespace Phidias\Core;
 
+use Phidias\Component\View;
+
 class Debug
 {
     private static $enabled             = FALSE;

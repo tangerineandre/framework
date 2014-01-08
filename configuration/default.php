@@ -1,5 +1,10 @@
 <?php
 return array(
+
+    /* Initialization folders 
+     * (there can be as many environment.initialize.* directives as needed)  */
+    'environment.initialize.general' => 'initialize',
+
     /* Application parameters */
     'application.max_depth' => 5,
 

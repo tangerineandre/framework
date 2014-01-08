@@ -2,79 +2,183 @@
 namespace Phidias\Core;
 
 use Phidias\Core\HTTP\Request;
+use Phidias\Component\ExceptionHandler;
 
 class Environment
 {
-    /* Directory structure */
-    const DIR_LIBRARIES     = 'libraries';
-    const DIR_TEMP          = '../temp';
+    private static $modules = array();
 
-    const DIR_CONFIGURATION = 'application/configuration';
-    const DIR_CONTROLLERS   = 'application/modules';
-    const DIR_VIEWS         = 'application/views';
-    const DIR_LANGUAGES     = 'application/languages';
-    const DIR_CONTROL       = 'application/control';
-    const DIR_LAYOUTS       = 'application/layouts';
+    /* Module directory structure.  All paths are relative to the module root */
+    const DIR_LIBRARIES         = 'libraries';
+    const DIR_CONFIGURATION     = 'configuration';
+    const DIR_LANGUAGES         = 'languages';
+    const DIR_VIEWS             = 'views';
+    const DIR_LAYOUTS           = 'layouts';
 
-    private static $_stack;
-    private static $_publicDirectoryHashes;
+    private static $mainPublicURL       = NULL;
+    private static $modulePublicURLs    = array();
 
-    private function parseStack($dir)
+    public static function URL($url)
     {
-        self::$_stack[] = realpath($dir);
+        self::$mainPublicURL = $url;
+    }
 
-        if ( is_file($dir.'/public/environment.php') ) {
-            $dependencies = include $dir.'/public/environment.php';
-            foreach ($dependencies as $node) {
-                self::parseStack($node);
-            }
+    public static function module($modulePath, $publicURL = NULL)
+    {
+        $realPath = realpath($modulePath);
+
+        if (!$realPath) {
+            trigger_error("module '$modulePath' not found");
+        } else {
+            self::$modules[]                    = $realPath;
+            self::$modulePublicURLs[$realPath]  = $publicURL;
         }
     }
 
-    public static function getPublicURL($node)
+
+    /* The following functions handle finding and listing files from the current module stack */
+
+
+    public static function autoload($class)
     {
-        $applicationURL = rtrim(Configuration::get('application.URL'), '/').'/';
-        return isset(self::$_publicDirectoryHashes[$node]) ? $applicationURL.self::$_publicDirectoryHashes[$node] : $applicationURL;
+        $classBaseName = str_replace( array('\\', '_'), '/', $class );
+
+        /* Straight correspondance to modules */
+        if ($filename = self::findFile(self::DIR_LIBRARIES."/$classBaseName.php")) {
+            Debug::startBlock("autoloading '$class' from '$filename'", 'include');
+            include $filename;
+            Debug::endBlock();
+            return;
+        }
     }
 
-    public static function initialize()
+    /* Given a filename reltive to the module root, find the file from the top of the stack
+     * Returns the full path to the found file, NULL otherwise
+     */
+    public static function findFile($filename)
+    {
+        for ($c = count(self::$modules)-1; $c >= 0; $c--) {
+            $currentModule = self::$modules[$c];
+            if (is_file("$currentModule/$filename")) {
+                return "$currentModule/$filename";
+            }
+        }
+
+        return NULL;
+    }
+
+    /* List full paths to all files and/or directories contained within every module inside the relative folder $directory
+     * from the bottom of the stack */
+    public static function listDirectory($directory, $showFiles = TRUE, $showDirectories = TRUE)
+    {
+        $retval = array();
+
+        foreach (self::$modules as $modulePath) {
+            $tmp = Filesystem::listDirectory($modulePath."/$directory", $showFiles, $showDirectories);
+            foreach ($tmp as $basename) {
+                $retval[] = $modulePath."/$directory/".$basename;
+            }
+        }
+
+        return $retval;
+    }
+
+    /* Determines the module that contains $filename ($filename must contain a full path) */
+    public static function findModule($filename)
+    {
+        foreach (self::$modules as $modulePath) {
+            if (strpos($filename, $modulePath) === 0) {
+                return $modulePath;
+            }
+        }
+
+        return FALSE;
+    }
+
+    /* Determines the URL corresponding to the specified module's public directory */
+    public static function getPublicURL($module)
+    {
+        return isset(self::$modulePublicURLs[$module]) ? self::$modulePublicURLs[$module] : self::$mainPublicURL;
+    }
+
+
+    public static function start()
+    {
+        if (isset($_GET['__debug'])) {
+            Debug::enable();
+        }
+
+        self::initialize();
+
+        try {
+
+            $resource       = Request::GET('_a', Configuration::get('controller.default'));
+            $requestMethod  = Request::method();
+            $attributes     = Request::GET();
+            unset($attributes['_a']);
+
+            echo Application::run($resource, $requestMethod, $attributes);
+
+        } catch (\Exception $e) {
+
+            echo ExceptionHandler::handle($e);
+        }
+
+        self::finalize();
+    }
+
+
+    private static function initialize()
     {
         Debug::startBlock('initializing environment');
 
+        /* Add the framework to the bottom of the stack */
+        array_unshift(self::$modules, realpath(__DIR__.'/../../../'));
+
+        /* Add invoking application to the top of the stack.
+         * Environment::start() is being run from: [CURRENT APPLICATION]/public/index.php
+         * so the path to the current application (main module) is the current previous folder
+        */
+        self::module('../');
+
+
+        /* Register environment autoloader */
         spl_autoload_register('self::autoload');
 
-        /* Inclusion hierarchy */
-        self::$_stack   = array();
-        $trace          = debug_backtrace();
-        for ($c=count($trace)-1; $c>=0; $c--) {
-            $node = str_replace(DIRECTORY_SEPARATOR.'public', '', dirname($trace[$c]['file']));
-            self::parseStack($node);
-        }
 
-        /* Determine path additions */
+        /* Add all module paths to the include path (priorizing the top of the stack) */
         $pathAdditions  = array();
-        foreach (self::$_stack as $node) {
-            $pathAdditions[]    = $node.DIRECTORY_SEPARATOR.self::DIR_LIBRARIES;
+        for ($c = count(self::$modules)-1; $c >= 0; $c--) {
+            $pathAdditions[] = self::$modules[$c].DIRECTORY_SEPARATOR.self::DIR_LIBRARIES;
         }
         $path = get_include_path().PATH_SEPARATOR.implode(PATH_SEPARATOR, $pathAdditions);
         set_include_path($path);
         Debug::add('include path: '.$path);
 
-        /* Include configuration */
+
+        /* Include every file in the configuration folder.  If the included file returns an array, load it as configuration variables */
         Debug::startBlock('including configuration files');
-        $configurations = self::listDirectory(self::DIR_CONFIGURATION, TRUE, FALSE);
-        foreach ($configurations as $file) {
+        $configurationFiles = self::listDirectory(self::DIR_CONFIGURATION, TRUE, FALSE);
+
+        foreach ($configurationFiles as $configurationFile) {
 
             /* Ignore configuration files prefixed with "_" */
-            if ( substr($file['name'],0,1) == '_') {
+            if (substr(basename($configurationFile), 0, 1) == '_') {
                 continue;
             }
 
-            Debug::startBlock("loading configuration from '".$file['name']."'", 'include');
-            Configuration::load($file['name'], $file['source']);
+            Debug::startBlock("loading configuration from '$configurationFile'", 'include');
+
+            $retval = include $configurationFile;
+            if (is_array($retval)) {
+                Configuration::set($retval);
+            }
+
             Debug::endBlock();
         }
         Debug::endBlock();
+
+
 
         /* Set environment variables from configuration */
         $errorReporting = Configuration::get('php.error_reporting');
@@ -97,7 +201,7 @@ class Environment
             date_default_timezone_set($timeZone);
         }
 
-        $layout = Configuration::get('application.layout');
+        $layout = Configuration::get('environment.layout');
         if ($layout) {
             Application::setLayout($layout);
         }
@@ -115,103 +219,80 @@ class Environment
             class_alias($targetClass, "Phidias\Component\\".$componentClass);
         }
 
-        if ($languageCode = Configuration::get('application.language')) {
+        /* Include dictionaries */
+        if ($languageCode = Configuration::get('environment.language')) {
             Debug::startBlock("loading language '$languageCode'");
+
             Language::setCode($languageCode);
             $dictionaries = self::listDirectory(self::DIR_LANGUAGES."/$languageCode", TRUE, FALSE);
-            foreach ( $dictionaries as $file ) {
-                Debug::startBlock("loading language file '".$file['name']."'", 'include');
-                Language::load($file['name'], $file['source']);
+            foreach ($dictionaries as $dictionaryFile) {
+                Debug::startBlock("loading language file '".$configurationFile['name']."'", 'include');
+
+                $words = include $dictionaryFile;
+                if (is_array($words)) {
+                    $context = substr($dictionaryFile, 0, strpos($dictionaryFile, self::DIR_LANGUAGES."/$languageCode")-1);
+                    Language::set($words, $context);
+                }
+
                 Debug::endBlock();
             }
+
             Debug::endBlock();
         }
 
-
-        /* Set up routing */
-        $routes = self::listFileOccurrences(self::DIR_CONTROL.'/routes.php');
-        foreach ($routes as $routeFile) {
-            include $routeFile;
+        /* Include all files in folders configured via environment.initialize.* */
+        $initializationFolders = Configuration::getAll('environment.initialize.');
+        foreach ($initializationFolders as $folder) {
+            $initializationFiles = self::listDirectory($folder, TRUE, FALSE);
+            foreach ($initializationFiles as $initializationFile) {
+                include $initializationFile;
+            }
         }
-
 
         Debug::endBlock();
     }
 
-    public static function finalize()
+    private static function finalize()
     {
         Debug::flush();
     }
 
-    public static function findFile($filename, &$node = NULL)
-    {
-        foreach ( self::$_stack as $dir ) {
-            if ( is_file("$dir/$filename") ) {
-                $node = $dir;
-                return "$dir/$filename";
-            }
-        }
-        return FALSE;
-    }
 
-    public static function listDirectory($directory, $showFiles = TRUE, $showDirectories = TRUE)
-    {
-        $contents = array();
-
-        for ( $c = count(self::$_stack)-1; $c >= 0; $c-- ) {
-            $tmp = Filesystem::listDirectory(self::$_stack[$c]."/$directory", $showFiles, $showDirectories);
-            foreach ( $tmp as $file ) {
-                $contents[] = array(
-                    'name'      => self::$_stack[$c]."/$directory/$file",
-                    'source'    => self::$_stack[$c]
-                );
-            }
-        }
-
-        return $contents;
-    }
-
-    public static function listFileOccurrences($file, $topToBottom = TRUE)
-    {
-        $occurrences = array();
-
-        for ( $c = count(self::$_stack)-1; $c >= 0; $c-- ) {
-            $node_file = self::$_stack[$c]."/$file";
-            if ( is_file($node_file) ) {
-                $occurrences[] = $node_file;
-            }
-        }
-
-        return $topToBottom ? $occurrences : array_reverse($occurrences);
-    }
-
-    public static function autoload($class)
-    {
-        $classBaseName = str_replace( array('\\', '_'), '/', $class );
-
-        /* Straight correspondance to modules */
-        if ( $filename = self::findFile(self::DIR_CONTROLLERS."/$classBaseName.php") ) {
-            Debug::startBlock("autoloading '$class' from '$filename'", 'include');
-            include $filename;
-            Debug::endBlock();
-            return;
-        }
-    }
-
-    public static function findSource($file)
-    {
-        foreach (self::$_stack as $stackDir) {
-            if (strpos($file, $stackDir) === 0) {
-                return $stackDir;
-            }
-        }
-
-        return FALSE;
-    }
-
+    /*
     public static function getStack()
     {
-        return self::$_stack;
+        return self::$modules;
     }
+
+    public static function findClasses($parentClass)
+    {
+        $retval = array();
+
+        for ($c = count(self::$modules)-1; $c >= 0; $c--) {
+            self::findClassesInFolder($parentClass, self::$modules[$c].'/'.self::DIR_CONTROLLERS, $retval);
+        }
+
+
+        return $retval;
+    }
+
+    private static function findClassesInFolder($parentClass, $folder, &$retval, $trail = NULL)
+    {
+        if ($trail === NULL) {
+            $trail = $folder.'/';
+        }
+
+        $files = Filesystem::listDirectory($folder);
+
+        foreach ($files as $file) {
+            if (is_file($folder.'/'.$file) && basename($file) == $parentClass.'.php') {
+                $retval[] = str_replace(array('/', '.php'), array('_', ''), str_replace($trail, '', $folder.'/'.$file));
+            } else if (is_dir($folder.'/'.$file)) {
+                self::findClassesInFolder($parentClass, $folder.'/'.$file, $retval, $trail);
+            }
+        }
+
+    }
+     */
 
 }

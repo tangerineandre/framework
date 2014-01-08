@@ -224,31 +224,30 @@ class Route
 
     }
 
-    public static function template($templateResource, &$fileSource = NULL)
+    public static function template($templateResource)
     {
         if (($languageCode = Language::getCode()) && Configuration::get('route.template.prefixLanguage')) {
-
             $targetFile = Environment::DIR_VIEWS."/".Configuration::get('view.format', 'html')."/".$languageCode."/$templateResource.".Configuration::get('view.extension', 'php');
-            $retval     = Environment::findFile($targetFile, $fileSource);
+            $retval     = Environment::findFile($targetFile);
             if ($retval) {
                 return $retval;
             }
-
         }
 
         $targetFile = Environment::DIR_VIEWS."/".Configuration::get('view.format', 'html')."/$templateResource.".Configuration::get('view.extension', 'php');
-        return Environment::findFile($targetFile, $fileSource);
+
+        return Environment::findFile($targetFile);
     }
 
-    public static function layout($layout, &$fileSource = NULL)
+    public static function layout($layout)
     {
         if (($languageCode = Language::getCode()) && Configuration::get('route.layout.prefixLanguage')) {
-            $retval = Environment::findFile(Environment::DIR_LAYOUTS.'/'.$languageCode.'/'.$layout, $fileSource);
+            $retval = Environment::findFile(Environment::DIR_LAYOUTS.'/'.$languageCode.'/'.$layout);
             if ($retval) {
                 return $retval;
             }
         }
 
-        return Environment::findFile(Environment::DIR_LAYOUTS.'/'.$layout, $fileSource);
+        return Environment::findFile(Environment::DIR_LAYOUTS.'/'.$layout);
     }
 }

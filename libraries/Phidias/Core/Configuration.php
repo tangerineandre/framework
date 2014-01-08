@@ -6,27 +6,9 @@ class Configuration
     private static $variables   = array();
     private static $sources     = array();
 
-    public static function load($file, $source = NULL)
-    {
-        $variables = include $file;
-
-        if ($source) {
-            if (!isset(self::$sources[$source])) {
-                self::$sources[$source] = $variables;
-            } else {
-                self::$sources[$source] = array_merge(self::$sources[$source], $variables);
-            }
-        }
-
-        self::$variables = array_merge(self::$variables, $variables);
-    }
-
     public static function get($variable, $default_value = NULL, $source = NULL)
     {
         if ($source) {
-            dumpx(debug_backtrace());
-            dump($variable);
-            dumpx($source);
             if ( !isset(self::$sources[$source]) ) {
                 return $default_value;
             }
@@ -37,8 +19,25 @@ class Configuration
         return isset(self::$variables[$variable]) ? self::$variables[$variable] : $default_value;
     }
 
-    public static function set($variable, $value, $source = NULL)
+    public static function set($variable, $value = NULL, $source = NULL)
     {
+        /* Assumed as Configuration::set($arrayOfVariables, $source) */
+        if (is_array($variable)) {
+            $source = $value;
+            self::$variables = array_merge(self::$variables, $variable);
+
+            if ($source) {
+                if (!isset(self::$sources[$source])) {
+                    self::$sources[$source] = $variable;
+                } else {
+                    self::$sources[$source] = array_merge(self::$sources[$source], $variable);
+                }
+            }
+
+            return;
+        }
+
+
         if ($source) {
             if ( !isset(self::$sources[$source]) ) {
                 self::$sources[$source] = array();

@@ -1,56 +1,24 @@
-Que es un entorno ?
+Un ENTORNO es la agrupación de uno o varios modulos para ser ejecutados
+en un servidor.
 
-Entorno de produccion, entorno de desarrollo, entorno de pruebas,  entorno de revision de backups ("entorno de snapshot pasado" ?),
-entornos de AB testing (Entorno A, Entorno B?)
+Un ENTORNO es, basicamente, una carpeta pública en donde se incluye un
+archivo index.php que carga, configura y ejecuta un modulo de Phidias Framework.
 
-Se podria pensar que un entorno es una implementacion de una aplicacion
+Ejemplo:
+/var/www/myapp.co/public/index.php:
 
-Para los ejemplos anteriores, cada entorno define su propio:
+<?php
+include '/var/www/lib/framework2/loader.php';           //Incluir el loader del framework
 
-- Configuracion
-- Componentes
-- Diccionarios
-- Vistas
-- Controladores
-- Scripts de inicializacion / finalizacion
+use Phidias\Core\Environment;                           //Usar la clase "Environment" de PHidias
 
-.... mejor dicho, todo.
+Environment::URL('http://phidias4.localhost');          //Especificar la URL del entorno
 
+Environment::module('../../framework2/modules/dev');    //Incluir los modulos adicionales a ejecutar
+Environment::module('../modules/dev');
 
-Que hacer si cada entorno necesita su propio espacio publico ?
-
-Por ejemplo:  En un entorno de PRODUCCION yo quiero tener
-
-<img src="img/logo.png" />
-
-Mientras que en un entorno de DESARROLLO quiero tener
-
-<img src="img/logo_dev.png" />
+Environment::start();                                   //Ejecutar la aplicación
 
 
-Actualmente (en Phidias v3) se exige que cada entorno tenga una URL publica (i.e. si ves el codigo de campestre.phidias.co veras que trae estilos de core.phidias.co)
-pero esto trae problemas de seguridad a la hora de hacer aplicaciones cliente (como incluir javascript desde otro dominio).
-
-Igual, la carpeta publica de cada entorno debe tener su propia URL.  Si quiero que este en el mismo dominio pues tengo que encontrar la forma
-de que sean, por ejemplo,
-
-produccion: http://miapp.co/
-dev: http://miapp.co/dev/
-
-y que dentro de un layout (o view) se pueda llamar <?=$this->URL?>, que debe contener el URL (que se define en la configuracion del entorno mediante "application.URL") del entorno
-de donde proviene el layout o view en cuestion.
-
-Para lograr que venga todo desde un mismo dominio pues me toca buscar la forma de hacerlo
-con un alias de apache o algo similar
-
-Entonces... un "Environment" contiene:
-
-/configuration
-/control
-/languages
-/modules
-/views
-/public
-
-claro que en ese sentido mas bien parece que deberia llamarse "application" y no "environment".  Si algo el "environment" podria
-ser la combinacion de varias "applications"
+El ENTORNO define la URL bajo la cual esta corriendo la aplicacion, los (opcionalmente) modulos adicionales
+a incluir para este entorno
