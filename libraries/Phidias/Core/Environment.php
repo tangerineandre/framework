@@ -149,7 +149,9 @@ class Environment
         /* Configured component aliases */
         $componentAliases = Configuration::getAll('component.');
         foreach ($componentAliases as $componentClass => $targetClass) {
-            class_alias($targetClass, "Phidias\Component\\".$componentClass);
+            if ($targetClass) {
+                class_alias($targetClass, "Phidias\Component\\".$componentClass);
+            }
         }
 
         /* Include dictionaries */
@@ -159,7 +161,7 @@ class Environment
             Language::setCode($languageCode);
             $dictionaries = self::listDirectory(self::DIR_LANGUAGES."/$languageCode", TRUE, FALSE);
             foreach ($dictionaries as $dictionaryFile) {
-                Debug::startBlock("loading language file '".$configurationFile['name']."'", 'include');
+                Debug::startBlock("loading language file '$dictionaryFile'", 'include');
 
                 $words = include $dictionaryFile;
                 if (is_array($words)) {
