@@ -46,13 +46,17 @@ class Application
             return;
         }
 
+        Debug::startBlock("running resource '$resource'", 'resource');
+
         self::$stack[self::$depth] = array($resource, $attributes);
 
         /* Get associated controller */
+        Debug::startBlock("routing '$resource'");
         $controllerData = Route::controller($resource, $requestMethod);
 
         /* not found */
         if ($controllerData === NULL) {
+            Debug::add("route for '$resource' not found");
             throw new Application\Exception\ResourceNotFound("$resource not found");
         }
 
@@ -60,10 +64,16 @@ class Application
         $controllerMethod     = $controllerData['method'];
         $controllerArguments  = $controllerData['arguments'];
 
+        Debug::add("'$resource' routed as $controllerClass->$controllerMethod()");
+        Debug::endBlock();
+
+
         /* authorization */
+        Debug::startBlock("authorizing $controllerClass->$controllerMethod()");
         if (!Authorization::authorized($controllerClass, $controllerMethod, $controllerArguments)) {
             throw new Application\Exception\Unauthorized("access to '$resource' denied");
         }
+        Debug::endBlock();
 
         /* Execute controller */
         $output = self::execute($controllerClass, $controllerMethod, $controllerArguments, $attributes);
@@ -73,6 +83,8 @@ class Application
             $layoutFile = Route::layout(self::$layout);
 
             if ($layoutFile) {
+                Debug::add("wrapping in layout '$layoutFile'");
+
                 Layout::set('output', $output);
                 $layout = new Layout($output, Environment::getPublicURL(Environment::findModule($layoutFile)));
                 $output = $layout->render($layoutFile);
@@ -80,6 +92,8 @@ class Application
         }
 
         self::$depth--;
+
+        Debug::endBlock();
 
         return $output;
     }
@@ -119,12 +133,11 @@ class Application
         /* render view */
         $attributes = $controllerObject->getAttributes();
         $variables  = $controllerObject->getVariables();
-        $viewData   = $controllerObject->getViewData();
-        $template   = $viewData->getTemplate();
+        $view       = $controllerObject->getView();
 
-        if ($template !== FALSE) {
+        if ($view !== FALSE) {
 
-            if ($template === NULL) {
+            if ($view === NULL) {
 
                 /* When no template is specified, determine the template from the invocable like so:
                  *
@@ -134,11 +147,11 @@ class Application
                  *
                 */
 
-                $basename = str_replace('_', '/', str_replace('_Controller', '', $controllerClass));
-                $template = strtolower($controllerMethod == 'main' ? $basename : $basename.'/'.$controllerMethod);
+                $basename   = str_replace('_', '/', str_replace('_Controller', '', $controllerClass));
+                $view       = strtolower($controllerMethod == 'main' ? $basename : $basename.'/'.$controllerMethod);
             }
 
-            $templateFile = Route::template($template);
+            $templateFile = Route::view($view);
 
             if ($templateFile) {
 
@@ -156,7 +169,7 @@ class Application
                 Debug::endBlock();
 
             } else {
-                Debug::add("no template found for $template");
+                Debug::add("no template found for $view");
             }
 
 

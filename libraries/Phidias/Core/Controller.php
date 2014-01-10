@@ -5,31 +5,32 @@ class RequiredAttributeException extends \Exception {}
 
 class Controller
 {
-    protected $attributes;
-    protected $view;
+    private $view;
+    private $model;
 
-    private $_variables;
+    protected $attributes;
 
     public function __construct($attributes = array())
     {
+        $this->view         = NULL;
+        $this->model        = array();
+
         $this->attributes   = new Controller_Attributes($attributes);
-        $this->view         = new Controller_ViewData;
-        $this->_variables   = array();
     }
 
     public function set($name, $value)
     {
-        $this->_variables[$name] = $value;
+        $this->model[$name] = $value;
     }
 
     public function get($name)
     {
-        return isset($this->_variables[$name]) ? $this->_variables[$name] : NULL;
+        return isset($this->model[$name]) ? $this->model[$name] : NULL;
     }
 
     public function getVariables()
     {
-        return $this->_variables;
+        return $this->model;
     }
 
     public function getAttributes()
@@ -37,9 +38,9 @@ class Controller
         return $this->attributes;
     }
 
-    public function useView($id)
+    public function useView($view)
     {
-        $this->view->setTemplate($id);
+        $this->view = $view;
     }
 
     public function disableView()
@@ -47,7 +48,7 @@ class Controller
         $this->useView(FALSE);
     }
 
-    public function getViewData()
+    public function getView()
     {
         return $this->view;
     }
@@ -78,21 +79,5 @@ class Controller_Attributes
         }
 
         return $this->data[$name];
-    }
-}
-
-
-class Controller_ViewData
-{
-    private $template;
-
-    public function setTemplate($id)
-    {
-        $this->template = $id;
-    }
-
-    public function getTemplate()
-    {
-        return $this->template;
     }
 }

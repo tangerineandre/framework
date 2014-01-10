@@ -96,15 +96,18 @@ class Debug
             self::endBlock();
         }
 
-        $templateFileSource = NULL;
-        $templateFile       = Route::template("phidias/debugger", $templateFileSource);
+        $templateFile = Route::view("phidias/debugger");
 
         if ($templateFile) {
-            $view = new View( Environment::getPublicURL($templateFileSource) );
+
+            $view = new View(Environment::getPublicURL(Environment::findModule($templateFile)));
+
             $view->assign('messages',   self::$messages);
             $view->assign('peakMemory', memory_get_peak_usage());
             $view->assign('totalTime',  microtime(true) - self::$initialTimestamp);
-            echo $view->fetch(Route::template("phidias/debugger"));
+
+            echo $view->fetch($templateFile);
+
         } else {
             dump(self::$messages);
         }

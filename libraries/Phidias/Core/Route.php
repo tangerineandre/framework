@@ -93,6 +93,8 @@ class Route
 
     private static function matchResource($resource, $requestMethod = NULL)
     {
+        Debug::add("finding explicit routing rule for '$resource'");
+
         $currentIndex       = self::$index;
         $parts              = explode('/', $resource);
         $matchedArguments   = array();
@@ -110,6 +112,7 @@ class Route
                 continue;
             }
 
+            Debug::add('no matching rule found');
             return NULL;
         }
 
@@ -129,10 +132,13 @@ class Route
             }
 
         } else {
+            Debug::add("no matching rule found for request method '$requestMethod'");
             return NULL;
         }
 
         $retval['arguments'] = array_merge($matchedArguments, $retval['arguments']);
+
+        Debug::add("found routing rule for '$resource'");
 
         return $retval;
     }
@@ -141,7 +147,7 @@ class Route
     /* Finds invocable via name matching (i.e. GET some/resource => Some_Controller::resource_get()  */
     public static function matchName($resource, $requestMethod = 'get')
     {
-        Debug::startBlock("mapping to '$resource' using naming conventions");
+        Debug::add("routing '$resource' using naming conventions");
 
         $parts              = explode('/', $resource);
 
@@ -155,20 +161,18 @@ class Route
 
         while ( !$found && count($parts) && $maxLoop-- ) {
 
-            Debug::add("looking for controller '$controller'");
-
             $class = implode('_', array_map('ucfirst', $parts)).'_Controller';
 
             $method = 'main_'.$requestMethod;
-            Debug::add("as $class->$method()");
-            if ( is_callable(array($class, $method)) ) {
+            Debug::add("looking for $class->$method()");
+            if (is_callable(array($class, $method))) {
                 $found = TRUE;
                 break;
             }
 
             $method = 'main';
-            Debug::add("as $class->$method()");
-            if ( is_callable(array($class, $method)) ) {
+            Debug::add("looking for $class->$method()");
+            if (is_callable(array($class, $method))) {
                 $found = TRUE;
                 break;
             }
@@ -176,21 +180,21 @@ class Route
             $partsPop       = array_pop($parts);
             $expectedMethod = strtolower($partsPop);
 
-            if ( !count($parts) ) {
+            if (!count($parts)) {
                 break;
             }
 
             $class = implode('_', array_map('ucfirst', $parts)).'_Controller';
 
             $method = $expectedMethod.'_'.$requestMethod;
-            Debug::add("as $class->$method()");
+            Debug::add("looking for $class->$method()");
             if ( is_callable(array($class, $method)) ) {
                 $found = TRUE;
                 break;
             }
 
             $method = $expectedMethod;
-            Debug::add("as $class->$method()");
+            Debug::add("looking for $class->$method()");
             if ( is_callable(array($class, $method)) ) {
                 $found = TRUE;
                 break;
@@ -205,16 +209,11 @@ class Route
             $class  = 'Default_Controller';
             $method = $controller;
 
-            Debug::add("finally as $class->$method()");
-            if ( !is_callable(array($class, $method)) ) {
-                Debug::add("route for '$resource' not found");
-                Debug::endBlock();
+            Debug::add("looking for $class->$method()");
+            if (!is_callable(array($class, $method))) {
                 return NULL;
             }
         }
-
-        Debug::add("routed as $class->$method()");
-        Debug::endBlock();
 
         return array(
             'class'     => $class,
@@ -224,7 +223,7 @@ class Route
 
     }
 
-    public static function template($templateResource)
+    public static function view($templateResource)
     {
         if (($languageCode = Language::getCode()) && Configuration::get('route.template.prefixLanguage')) {
             $targetFile = Environment::DIR_VIEWS."/".Configuration::get('view.format', 'html')."/".$languageCode."/$templateResource.".Configuration::get('view.extension', 'php');

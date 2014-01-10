@@ -1,4 +1,13 @@
 <?php
 namespace Phidias\Core\Application\Exception;
 
-class WrongArgumentCount extends \Exception {}
+use Phidias\Core\HTTP\Response;
+
+class WrongArgumentCount extends \Exception {
+
+    public function __construct($message = NULL, $code = NULL, $previous = NULL) {
+        Response::code(404);
+        parent::__construct($message, $code, $previous);
+    }
+
+}

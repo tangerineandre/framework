@@ -35,73 +35,6 @@ class Environment
         }
     }
 
-
-    /* The following functions handle finding and listing files from the current module stack */
-
-
-    public static function autoload($class)
-    {
-        $classBaseName = str_replace( array('\\', '_'), '/', $class );
-
-        /* Straight correspondance to modules */
-        if ($filename = self::findFile(self::DIR_LIBRARIES."/$classBaseName.php")) {
-            Debug::startBlock("autoloading '$class' from '$filename'", 'include');
-            include $filename;
-            Debug::endBlock();
-            return;
-        }
-    }
-
-    /* Given a filename reltive to the module root, find the file from the top of the stack
-     * Returns the full path to the found file, NULL otherwise
-     */
-    public static function findFile($filename)
-    {
-        for ($c = count(self::$modules)-1; $c >= 0; $c--) {
-            $currentModule = self::$modules[$c];
-            if (is_file("$currentModule/$filename")) {
-                return "$currentModule/$filename";
-            }
-        }
-
-        return NULL;
-    }
-
-    /* List full paths to all files and/or directories contained within every module inside the relative folder $directory
-     * from the bottom of the stack */
-    public static function listDirectory($directory, $showFiles = TRUE, $showDirectories = TRUE)
-    {
-        $retval = array();
-
-        foreach (self::$modules as $modulePath) {
-            $tmp = Filesystem::listDirectory($modulePath."/$directory", $showFiles, $showDirectories);
-            foreach ($tmp as $basename) {
-                $retval[] = $modulePath."/$directory/".$basename;
-            }
-        }
-
-        return $retval;
-    }
-
-    /* Determines the module that contains $filename ($filename must contain a full path) */
-    public static function findModule($filename)
-    {
-        foreach (self::$modules as $modulePath) {
-            if (strpos($filename, $modulePath) === 0) {
-                return $modulePath;
-            }
-        }
-
-        return FALSE;
-    }
-
-    /* Determines the URL corresponding to the specified module's public directory */
-    public static function getPublicURL($module)
-    {
-        return isset(self::$modulePublicURLs[$module]) ? self::$modulePublicURLs[$module] : self::$mainPublicURL;
-    }
-
-
     public static function start()
     {
         if (isset($_GET['__debug'])) {
@@ -245,7 +178,9 @@ class Environment
         foreach ($initializationFolders as $folder) {
             $initializationFiles = self::listDirectory($folder, TRUE, FALSE);
             foreach ($initializationFiles as $initializationFile) {
+                Debug::startBlock("including initialization file '$initializationFile'", 'include');
                 include $initializationFile;
+                Debug::endBlock();
             }
         }
 
@@ -254,29 +189,104 @@ class Environment
 
     private static function finalize()
     {
+        Debug::startBlock("finalizing environment");
+
+        /* Include all files in folders configured via environment.finalize.* */
+        $finalizationFolders = Configuration::getAll('environment.finalize.');
+        foreach ($finalizationFolders as $folder) {
+            $finalizationFiles = self::listDirectory($folder, TRUE, FALSE);
+            foreach ($finalizationFiles as $finalizationFile) {
+                Debug::startBlock("including finalization file '$finalizationFile'", 'include');
+                include $finalizationFile;
+                Debug::endBlock();
+            }
+        }
+
+
+        Debug::endBlock();
+
         Debug::flush();
     }
 
 
-    /*
-    public static function getStack()
+    /* The following functions handle finding and listing files from the current module stack */
+
+
+    public static function autoload($class)
     {
-        return self::$modules;
+        $classBaseName = str_replace( array('\\', '_'), '/', $class );
+
+        /* Straight correspondance to modules */
+        if ($filename = self::findFile(self::DIR_LIBRARIES."/$classBaseName.php")) {
+            Debug::startBlock("autoloading '$class' from '$filename'", 'include');
+            include $filename;
+            Debug::endBlock();
+            return;
+        }
     }
 
-    public static function findClasses($parentClass)
+    /* Given a filename reltive to the module root, find the file from the top of the stack
+     * Returns the full path to the found file, NULL otherwise
+     */
+    public static function findFile($filename)
+    {
+        for ($c = count(self::$modules)-1; $c >= 0; $c--) {
+            $currentModule = self::$modules[$c];
+            if (is_file("$currentModule/$filename")) {
+                return "$currentModule/$filename";
+            }
+        }
+
+        return NULL;
+    }
+
+    /* List full paths to all files and/or directories contained within every module inside the relative folder $directory
+     * from the bottom of the stack */
+    public static function listDirectory($directory, $showFiles = TRUE, $showDirectories = TRUE)
     {
         $retval = array();
 
-        for ($c = count(self::$modules)-1; $c >= 0; $c--) {
-            self::findClassesInFolder($parentClass, self::$modules[$c].'/'.self::DIR_CONTROLLERS, $retval);
+        foreach (self::$modules as $modulePath) {
+            $tmp = Filesystem::listDirectory($modulePath."/$directory", $showFiles, $showDirectories);
+            foreach ($tmp as $basename) {
+                $retval[] = $modulePath."/$directory/".$basename;
+            }
         }
-
 
         return $retval;
     }
 
-    private static function findClassesInFolder($parentClass, $folder, &$retval, $trail = NULL)
+    /* Determines the module that contains $filename ($filename must contain a full path) */
+    public static function findModule($filename)
+    {
+        foreach (self::$modules as $modulePath) {
+            if (strpos($filename, $modulePath) === 0) {
+                return $modulePath;
+            }
+        }
+
+        return FALSE;
+    }
+
+    /* Determines the URL corresponding to the specified module's public directory */
+    public static function getPublicURL($module)
+    {
+        return isset(self::$modulePublicURLs[$module]) ? self::$modulePublicURLs[$module] : self::$mainPublicURL;
+    }
+
+    /* Finds all files postfixed with $classname */
+    public static function findClasses($classname)
+    {
+        $retval = array();
+
+        for ($c = count(self::$modules)-1; $c >= 0; $c--) {
+            self::findClassesInFolder($classname, self::$modules[$c].'/'.self::DIR_LIBRARIES, $retval);
+        }
+
+        return $retval;
+    }
+
+    private static function findClassesInFolder($classname, $folder, &$retval, $trail = NULL)
     {
         if ($trail === NULL) {
             $trail = $folder.'/';
@@ -285,14 +295,12 @@ class Environment
         $files = Filesystem::listDirectory($folder);
 
         foreach ($files as $file) {
-            if (is_file($folder.'/'.$file) && basename($file) == $parentClass.'.php') {
+            if (is_file($folder.'/'.$file) && basename($file) == $classname.'.php') {
                 $retval[] = str_replace(array('/', '.php'), array('_', ''), str_replace($trail, '', $folder.'/'.$file));
             } else if (is_dir($folder.'/'.$file)) {
-                self::findClassesInFolder($parentClass, $folder.'/'.$file, $retval, $trail);
+                self::findClassesInFolder($classname, $folder.'/'.$file, $retval, $trail);
             }
         }
-
     }
-     */
 
 }
