@@ -1,157 +1,109 @@
 <?php
 use Phidias\Core\Controller;
 use Phidias\Core\Environment;
-use Phidias\Core\Filesystem;
 
 class Phidias_Orm_Controller extends Controller
 {
-
-    /* Return a dependency-organized array of entities */
-    private function findEntities(&$retval, $folder, $basename = NULL)
+    private static function getEntities($prefix = NULL)
     {
-        $files = Filesystem::listDirectory($folder, TRUE, FALSE);
-        foreach ($files as $file) {
-            if ($file !== 'Entity.php') {
+        $priorizedEntities = self::priorizeEntities(Environment::findClasses('Entity'));
+
+        if ($prefix) {
+            foreach ($priorizedEntities as $className => $object) {
+                if (stripos($className, $prefix) !== 0) {
+                    unset($priorizedEntities[$className]);
+                }
+            }
+        }
+
+        return $priorizedEntities;
+    }
+
+    private static function priorizeEntities($classnames, &$organized = array(), &$checking = array())
+    {
+        foreach ($classnames as $classname) {
+
+            if (strpos($classname, 'Phidias_ORM') === 0) {
                 continue;
             }
 
-            $classname = $basename.str_replace('.php', '', $file);
-
-            if (substr($classname, 0, 2) == 'V3') {
+            if (isset($checking[$classname])) {
                 continue;
             }
+
+            $checking[$classname] = true;
 
             $object = new $classname;
-            
             if (!$object instanceof \Phidias\ORM\Entity) {
                 continue;
             }
-            
-            $map = $object->getMap();
+
+            $map    = $object->getMap();
+            $db     = $map->getDB();
+            if ($db !== NULL) {
+                continue;
+            }
 
             $relations = array();
             foreach ($map->getRelations() as $relationData) {
                 $relations[] = $relationData['entity'];
             }
 
-            $retval[$classname] = array(
-                'class'     => $classname,
-                'relations' => $relations
-            );
+            self::priorizeEntities($relations, $organized, $checking);
+
+            $organized[$classname] = $object;
 
         }
 
-        $subfolders = Filesystem::listDirectory($folder, FALSE, TRUE);
-        foreach ($subfolders as $subfolder) {
-            $this->findEntities($retval, $folder.'/'.$subfolder, $basename.$subfolder.'_');
+        return $organized;
+    }
+
+    public function create()
+    {
+        $entities = self::getEntities($this->attributes->get('prefix'));
+
+        foreach ($entities as $entity) {
+            $entity::table()->create();
+        }
+
+        foreach ($entities as $entity) {
+            $entity::table()->createTriggers();
         }
     }
 
-    private function organizeEntity($name, &$index, &$organized)
+    public function drop()
     {
-        if (isset($index[$name]['seen'])) {
-            return;
-        }
-        $index[$name]['seen'] = $name;
+        $entities = self::getEntities($this->attributes->get('prefix'));
 
-        if (isset($index[$name]['relations'])) {
-            foreach ($index[$name]['relations'] as $relatedEntity) {
-                $this->organizeEntity($relatedEntity, $index, $organized);
-            }
-        }
-
-        $organized[] = $name;
-    }
-
-    public function install()
-    {
-        $environmentStack   = Environment::getStack();
-        $entitiesDirectory  = $environmentStack[0].'/application/modules/';
-        $prefix             = $this->attributes->get('prefix');
-
-        if (!Filesystem::isDirectory($entitiesDirectory)) {
-            throw new \Exception("'$entitiesDirectory' not found");
-        }
-
-        $entities = array();
-        $this->findEntities($entities, $entitiesDirectory);
-        $organized = array();
-
-        foreach (array_keys($entities) as $entityName) {
-            $this->organizeEntity($entityName, $entities, $organized);
-        }
-
-        $targetEntities = $organized;
-
-        if ($prefix) {
-            foreach ($targetEntities as $key => $className) {
-                if (stripos($className, $prefix) !== 0) {
-                    unset($targetEntities[$key]);
-                }
-            }
-        }
-
-        foreach (array_reverse($targetEntities) as $entity) {
-            $table = $entity::table();
-            $table->drop();
-        }
-
-        try {
-            foreach ($targetEntities as $entity) {
-                $table = $entity::table();
-                $table->create();
-            }
-
-            foreach ($targetEntities as $entity) {
-                $table = $entity::table();
-                $table->createTriggers();
-            }
-
-        } catch (Exception $e) {
-            dumpx($e);
+        foreach (array_reverse($entities) as $entity) {
+            $entity::table()->drop();
         }
     }
 
     public function triggers()
     {
-        $environmentStack = Environment::getStack();
-        $entities = array();
-        $this->findEntities($entities, $environmentStack[0].'/application/modules');
+        $entities = self::getEntities($this->attributes->get('prefix'));
 
-         foreach (array_keys($entities) as $entityName) {
-            $table = $entityName::table();
-            $table->createTriggers();
+        foreach ($entities as $entity) {
+            $entity::table()->createTriggers();
         }
-
     }
 
     public function truncate()
     {
-        $environmentStack = Environment::getStack();
+        $entities = self::getEntities($this->attributes->get('prefix'));
 
-        $entities = array();
-        $this->findEntities($entities, $environmentStack[0].'/application/modules');
-        $organized = array();
-
-        foreach (array_keys($entities) as $entityName) {
-            $this->organizeEntity($entityName, $entities, $organized);
-        }
-
-        foreach (array_reverse($organized) as $entity) {
-            $table = $entity::table();
-            $table->clear();
+        foreach (array_reverse($entities) as $entity) {
+            $entity::table()->clear();
         }
     }
 
     public function optimize()
     {
-        $environmentStack = Environment::getStack();
+        $entities = self::getEntities($this->attributes->get('prefix'));
 
-        $entities = array();
-        $this->findEntities($entities, $environmentStack[0].'/application/modules');
-
-        foreach (array_keys($entities) as $entityName) {
-            $table = $entityName::table();
+        foreach ($entities as $entity) {
+            $table = $entity::table();
             $table->defragment();
             $table->optimize();
         }
