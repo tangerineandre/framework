@@ -468,6 +468,10 @@ class Collection
             $iterator->attr($attributeName, $joinData['collection']->buildIterator());
         }
 
+        foreach ($this->postFilters as $filter) {
+            $iterator->addPostFilter($filter);
+        }
+
         return $iterator;
     }
 
@@ -492,10 +496,6 @@ class Collection
             }
         } else if ($this->hasOneElement) {
             return $iterator->first();
-        }
-
-        foreach ($this->postFilters as $filter) {
-            $iterator->addPostFilter($filter);
         }
 
         return $iterator;
