@@ -3,6 +3,7 @@ namespace Phidias\Util\Specification;
 
 use Phidias\Core\Environment;
 use Phidias\Core\Configuration;
+use Phidias\Core\Debug;
 
 class Object
 {
@@ -18,6 +19,7 @@ class Object
         $specificationFile  = Environment::findFile($filename);
         
         if ($specificationFile === NULL) {
+            Debug::add("specification file for '$class' ($filename) not found");
             return NULL;
         }
         

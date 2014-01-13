@@ -242,6 +242,32 @@ class Environment
         return NULL;
     }
 
+    /* Given a filename reltive to the module root, find the file from the top of the stack
+     * Returns the full path to the found file, NULL otherwise
+     */
+    public static function findFolder($folder)
+    {
+        for ($c = count(self::$modules)-1; $c >= 0; $c--) {
+            $currentModule = self::$modules[$c];
+            if (is_dir("$currentModule/$folder")) {
+                return "$currentModule/$folder";
+            }
+        }
+
+        return NULL;
+    }
+
+
+    public static function glob($pattern, $flags = 0)
+    {
+        $retval = array();
+        foreach (self::$modules as $currentModule) {
+            $retval = array_merge($retval, glob($currentModule.DIRECTORY_SEPARATOR.$pattern, $flags));
+        }
+
+        return $retval;
+    }
+
     /* List full paths to all files and/or directories contained within every module inside the relative folder $directory
      * from the bottom of the stack */
     public static function listDirectory($directory, $showFiles = TRUE, $showDirectories = TRUE)
