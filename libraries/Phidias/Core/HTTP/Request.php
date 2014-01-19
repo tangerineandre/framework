@@ -37,8 +37,12 @@ class Request
         } else {
             return isset($incomingJSON->$name) ? $incomingJSON->$name : $onEmpty;
         }
+    }
 
-
+    /* Return the full path to the uploaded file (via multipart/form-data) */
+    public static function file($index)
+    {
+        return isset($_FILES[$index]) ? $_FILES[$index] : NULL;
     }
 
     /* Return the value for the specified header */
