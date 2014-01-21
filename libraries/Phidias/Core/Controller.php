@@ -1,7 +1,7 @@
 <?php
 namespace Phidias\Core;
 
-class RequiredAttributeException extends \Exception {}
+class RequiredAttributeException extends \Phidias\Exception {}
 
 class Controller
 {
@@ -75,7 +75,7 @@ class Controller_Attributes
     public function required($name)
     {
         if ( !isset($this->data[$name]) ) {
-            throw new RequiredAttributeException("'$name' is required");
+            throw new RequiredAttributeException(array('attribute' => $name));
         }
 
         return $this->data[$name];

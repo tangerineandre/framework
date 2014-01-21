@@ -57,7 +57,7 @@ class Application
         /* not found */
         if ($controllerData === NULL) {
             Debug::add("route for '$resource' not found");
-            throw new Application\Exception\ResourceNotFound("$resource not found");
+            throw new Application\Exception\ResourceNotFound(array('resource' => $resource));
         }
 
         $controllerClass      = $controllerData['class'];
@@ -71,7 +71,7 @@ class Application
         /* authorization */
         Debug::startBlock("authorizing $controllerClass->$controllerMethod()");
         if (!Authorization::authorized($controllerClass, $controllerMethod, $controllerArguments)) {
-            throw new Application\Exception\Unauthorized("access to '$resource' denied");
+            throw new Application\Exception\Unauthorized(array('resource' => $resource));
         }
         Debug::endBlock();
 
@@ -112,7 +112,7 @@ class Application
         $incomingArgumentCount    = count($controllerArguments);
 
         if (($incomingArgumentCount < $requiredArgumentCount) || ($incomingArgumentCount > $argumentCount )) {
-            throw new Application\Exception\WrongArgumentCount("$controllerClass->$controllerMethod() expects $requiredArgumentCount arguments");
+            throw new Application\Exception\WrongArgumentCount(array('expected' => $requiredArgumentCount));
         }
 
         $languagePreviousContext = Language::getCurrentContext();

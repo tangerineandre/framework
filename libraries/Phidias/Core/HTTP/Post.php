@@ -1,6 +1,8 @@
 <?php
 namespace Phidias\Core\HTTP;
 
+use Phidias\Exception;
+
 class Post
 {
     static public function get($varname, $onNull = null)
@@ -12,7 +14,7 @@ class Post
     {
         $retval = self::get($varname);
         if ( $retval === NULL ) {
-            throw new Application_Exception($msg);
+            throw new Exception(array('required' => $varname), $msg);
         }
 
         return $retval;

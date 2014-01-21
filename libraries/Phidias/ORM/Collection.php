@@ -492,7 +492,10 @@ class Collection
         if ($primaryKeyValue) {
             $iterator = $iterator->first();
             if ($iterator === NULL) {
-                throw new Exception\EntityNotFound(get_class($this->entity), implode(', ', (array)$primaryKeyValue));
+                throw new Exception\EntityNotFound(array(
+                    'class' => get_class($this->entity),
+                    'key'   => $primaryKeyValue
+                ));
             }
         } else if ($this->hasOneElement) {
             return $iterator->first();
@@ -601,7 +604,8 @@ class Collection
                 try {
                     $values[$columnName] = isset($entity->$attributeName) ? $this->joins[$attributeName]['collection']->save($entity->$attributeName) : NULL;
                 } catch (\Phidias\DB\Exception\DuplicateKey $e) {
-                    $values[$columnName] = $e->getKey() == 'PRIMARY' ? $e->getEntry() : NULL;
+                    $exceptionData = $e->getData();
+                    $values[$columnName] = $exceptionData['key'] == 'PRIMARY' ? $exceptionData['entry'] : NULL;
                 }
 
             } else if (isset($entity->$attributeName)) {

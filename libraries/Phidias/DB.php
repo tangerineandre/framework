@@ -62,14 +62,14 @@ class DB
             $database   = isset($identifier['database'])    ? $identifier['database']   : NULL;
             $charset    = isset($identifier['charset'])     ? $identifier['charset']    : NULL;
         } else {
-            throw new DB\Exception("invalid connection parameter");
+            throw new DB\Exception(array('identifier' => $identifier), "invalid connection parameter");
         }
 
         Debug::startBlock("connecting to DB: $username:$password@$host/$database", 'SQL');
         $mysqli = new \mysqli($host, $username, $password, $database);
 
         if ($mysqli->connect_errno) {
-            throw new DB\Exception\CannotConnect($mysqli->connect_error);
+            throw new DB\Exception\CannotConnect(null, $mysqli->connect_error);
         }
 
         if ($charset) {
@@ -145,35 +145,35 @@ class DB
         switch ($errno) {
 
             case 1048:
-                $exception = new DB\Exception\CannotBeNull($error, $errno);
+                $exception = new DB\Exception\CannotBeNull(null, $error);
             break;
 
             case 1054:
-                $exception = new DB\Exception\UnknownColumn($error, $errno);
+                $exception = new DB\Exception\UnknownColumn(null, $error);
             break;
 
             case 1062:
-                $exception = new DB\Exception\DuplicateKey($error, $errno);
+                $exception = new DB\Exception\DuplicateKey(null, $error);
             break;
 
             case 1064:
-                $exception = new DB\Exception\ParseError($error, $errno);
+                $exception = new DB\Exception\ParseError(null, $error);
             break;
 
             case 1146:
-                $exception = new DB\Exception\UnknownTable($error, $errno);
+                $exception = new DB\Exception\UnknownTable(null, $error);
             break;
 
             case 1451:
-                $exception = new DB\Exception\ForeignKeyConstraint($error, $errno);
+                $exception = new DB\Exception\ForeignKeyConstraint(null, $error);
             break;
 
             case 1452:
-                $exception = new DB\Exception\ReferenceNotFound($error, $errno);
+                $exception = new DB\Exception\ReferenceNotFound(null, $error);
             break;
 
             default:
-                $exception = new DB\Exception("Uncaught DB exception: ".$error, $errno);
+                $exception = new DB\Exception(null, "Uncaught DB exception: ".$error);
             break;
 
         }

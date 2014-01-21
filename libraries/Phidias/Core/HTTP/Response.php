@@ -13,17 +13,10 @@ class Response
         header($header_name.': '.$header_value);
     }
 
-    public static function code($response_code)
+    public static function code($code, $text = NULL)
     {
-        http_response_code($response_code);
-    }
-}
 
-
-if (!function_exists('http_response_code')) {
-    function http_response_code($code = NULL) {
-
-        if ($code !== NULL) {
+        if ($text === NULL) {
 
             switch ($code) {
                 case 100: $text = 'Continue'; break;
@@ -63,24 +56,16 @@ if (!function_exists('http_response_code')) {
                 case 503: $text = 'Service Unavailable'; break;
                 case 504: $text = 'Gateway Time-out'; break;
                 case 505: $text = 'HTTP Version not supported'; break;
-                default:
-                    exit('Unknown http status code "' . htmlentities($code) . '"');
+                default: $text = 'Bad Request'; break;
                 break;
             }
 
-            $protocol = (isset($_SERVER['SERVER_PROTOCOL']) ? $_SERVER['SERVER_PROTOCOL'] : 'HTTP/1.0');
-
-            header($protocol . ' ' . $code . ' ' . $text);
-
-            $GLOBALS['http_response_code'] = $code;
-
-        } else {
-
-            $code = (isset($GLOBALS['http_response_code']) ? $GLOBALS['http_response_code'] : 200);
-
         }
 
-        return $code;
+        $protocol = (isset($_SERVER['SERVER_PROTOCOL']) ? $_SERVER['SERVER_PROTOCOL'] : 'HTTP/1.0');
+        header($protocol . ' ' . $code . ' ' . $text);
+        $GLOBALS['http_response_code'] = $code;
 
+        return $code;        
     }
 }
