@@ -1,6 +1,8 @@
 <?php
 namespace Phidias\Core;
 
+use \Phidias\Component\Configuration;
+use \Phidias\Component\Language;
 use \Phidias\Component\View;
 use \Phidias\Component\Authorization;
 
@@ -41,7 +43,7 @@ class Application
 
         /* Increase depth */
         self::$depth++;
-        if ( self::$depth > Configuration::get('application.max_depth') ) {
+        if (self::$depth > Configuration::get('application.max_depth')) {
             Debug::add("reached max depth");
             return;
         }

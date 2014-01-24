@@ -1,7 +1,7 @@
 <?php
 namespace Phidias\Component;
 
-interface Shared_Interface
+interface SharedInterface
 {
     public function __construct($shareName);
     public function get($key, $defaultValue = NULL);

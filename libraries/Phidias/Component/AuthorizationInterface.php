@@ -1,7 +1,7 @@
 <?php
 namespace Phidias\Component;
 
-interface Authorization_Interface
+interface AuthorizationInterface
 {
     public static function authorized($class, $method, $arguments = array());
 }

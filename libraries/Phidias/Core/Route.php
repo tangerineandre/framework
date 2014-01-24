@@ -7,9 +7,6 @@ Route::addRule($resourcePattern, $method, $class, $method, $additionalArguments)
 e.g.
 Route::addRule('groups/roles', NULL, 'Person_Role_Controller', 'collection');
 
-
-
-
 Route matching should be as fast as possible.  To do this we will have a pattern index, like this:
 
 Suppose the following routes are added:
@@ -45,14 +42,12 @@ index = array(
 
 
 );
-
-
-
-
-
 */
 
 namespace Phidias\Core;
+
+use Phidias\Component\Configuration;
+use Phidias\Component\Language;
 
 class Route
 {

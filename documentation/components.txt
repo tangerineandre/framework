@@ -16,7 +16,7 @@ framework2/librarias/Phidias/Component/Storage like so:
 
 namespace Phidias\Component;
 
-class Storage implements Storage_Interface
+class Storage implements StorageInterface
 {
     public static function save($filename, $contents)
     {

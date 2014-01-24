@@ -3,7 +3,7 @@ namespace Phidias\Component;
 
 use \Phidias\Core\Debug;
 
-class View implements View_Interface
+class View implements ViewInterface
 {
     private $_variables;
     private $_URL;

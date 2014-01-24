@@ -1,7 +1,7 @@
 <?php
 namespace Phidias\Component;
 
-interface Session_Interface
+interface SessionInterface
 {
     public static function set($varname, $value = NULL);
     public static function get($varname, $default = NULL);

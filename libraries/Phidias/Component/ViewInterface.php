@@ -1,7 +1,7 @@
 <?php
 namespace Phidias\Component;
 
-interface View_Interface
+interface ViewInterface
 {
     public function assign($name, $value = NULL);
     public function isValid($file);

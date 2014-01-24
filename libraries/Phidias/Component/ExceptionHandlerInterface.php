@@ -1,7 +1,7 @@
 <?php
 namespace Phidias\Component;
 
-interface ExceptionHandler_Interface
+interface ExceptionHandlerInterface
 {
     public static function handle(\Exception $e);
 }

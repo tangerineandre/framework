@@ -4,7 +4,7 @@ namespace Phidias\Component;
 use Phidias\Core\Configuration;
 
 
-class Session implements Session_Interface
+class Session implements SessionInterface
 {
     private static $_loaded = FALSE;
 

@@ -3,10 +3,13 @@ namespace Phidias\Core;
 
 use Phidias\Core\HTTP\Request;
 use Phidias\Component\ExceptionHandler;
+use Phidias\Component\Configuration;
+use Phidias\Component\Language;
 
 class Environment
 {
-    private static $modules = array();
+    private static $modules     = array();
+    private static $components  = array();
 
     /* Module directory structure.  All paths are relative to the module root */
     const DIR_LIBRARIES         = 'libraries';
@@ -18,9 +21,9 @@ class Environment
     private static $mainPublicURL       = NULL;
     private static $modulePublicURLs    = array();
 
-    public static function URL($url)
+    public static function component($componentName, $componentClass)
     {
-        self::$mainPublicURL = $url;
+        self::$components[$componentName] = $componentClass;
     }
 
     public static function module($modulePath, $publicURL = NULL)
@@ -33,6 +36,11 @@ class Environment
             self::$modules[]                    = $realPath;
             self::$modulePublicURLs[$realPath]  = $publicURL;
         }
+    }
+
+    public static function URL($url)
+    {
+        self::$mainPublicURL = $url;
     }
 
     public static function start()
@@ -89,90 +97,47 @@ class Environment
         Debug::add('include path: '.$path);
 
 
-        /* Include every file in the configuration folder.  If the included file returns an array, load it as configuration variables */
-        Debug::startBlock('including configuration files');
-        $configurationFiles = self::listDirectory(self::DIR_CONFIGURATION, TRUE, FALSE);
+        /* Set class aliases for configured components */
+        foreach (self::$components as $componentName => $componentClass) {
 
-        foreach ($configurationFiles as $configurationFile) {
-
-            /* Ignore configuration files prefixed with "_" */
-            if (substr(basename($configurationFile), 0, 1) == '_') {
-                continue;
+            if (!class_exists($componentClass)) {
+                trigger_error("component class '$componentClass' not found", E_USER_ERROR);
             }
 
-            Debug::startBlock("loading configuration from '$configurationFile'", 'include');
-
-            $retval = include $configurationFile;
-            if (is_array($retval)) {
-                Configuration::set($retval);
+            $componentReflection = new ReflectionClass($componentClass);
+            if (!$componentReflection->implementsInterface("Phidias\Component\\$componentName\Interface")) {
+                trigger_error("component class '$componentClass' does not implement interface 'Phidias\Component\\$componentName\Interface'", E_USER_ERROR);
             }
 
-            Debug::endBlock();
-        }
-        Debug::endBlock();
-
-
-
-        /* Set environment variables from configuration */
-        $errorReporting = Configuration::get('php.error_reporting');
-        if ( $errorReporting !== NULL ) {
-            error_reporting($errorReporting);
+            class_alias($componentClass, "Phidias\Component\\".$componentName);
         }
 
-        $displayErrors = Configuration::get('php.display_errors');
-        if ( $displayErrors !== NULL ) {
-            ini_set('display_errors', $displayErrors);
+
+        /* Load configuration */
+        Configuration::load();
+
+        /* Set PHP INI variables from configuration */
+        $iniVariables = Configuration::getAll("php.");
+        foreach ($iniVariables as $iniKey => $iniValue) {
+            ini_set($iniKey, $iniValue);
         }
 
-        $timeLimit = Configuration::get('php.time_limit');
-        if ( $timeLimit !== NULL ) {
-            set_time_limit($timeLimit);
-        }
-
-        $timeZone = Configuration::get('php.timezone');
-        if ($timeZone) {
-            date_default_timezone_set($timeZone);
-        }
-
+        /* Set application layout */
         $layout = Configuration::get('environment.layout');
         if ($layout) {
             Application::setLayout($layout);
         }
 
         /* Set appropiate response format */
-        if ( Request::getBestSupportedMimeType(array('application/json', 'application/javascript')) ) {
+        if (Request::getBestSupportedMimeType(array('application/json', 'application/javascript'))) {
             Application::setLayout(FALSE);
             Configuration::set('view.format', 'json');
             Configuration::set('view.extension', 'json');
         }
 
-        /* Configured component aliases */
-        $componentAliases = Configuration::getAll('component.');
-        foreach ($componentAliases as $componentClass => $targetClass) {
-            if ($targetClass) {
-                class_alias($targetClass, "Phidias\Component\\".$componentClass);
-            }
-        }
-
         /* Include dictionaries */
         if ($languageCode = Configuration::get('environment.language')) {
-            Debug::startBlock("loading language '$languageCode'");
-
-            Language::setCode($languageCode);
-            $dictionaries = self::listDirectory(self::DIR_LANGUAGES."/$languageCode", TRUE, FALSE);
-            foreach ($dictionaries as $dictionaryFile) {
-                Debug::startBlock("loading language file '$dictionaryFile'", 'include');
-
-                $words = include $dictionaryFile;
-                if (is_array($words)) {
-                    $context = substr($dictionaryFile, 0, strpos($dictionaryFile, self::DIR_LANGUAGES."/$languageCode")-1);
-                    Language::set($words, $context);
-                }
-
-                Debug::endBlock();
-            }
-
-            Debug::endBlock();
+            Language::load($languageCode);
         }
 
         /* Include all files in folders configured via environment.initialize.* */

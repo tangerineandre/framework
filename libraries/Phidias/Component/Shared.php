@@ -4,7 +4,7 @@ namespace Phidias\Component;
 use Phidias\Core\Environment;
 use Phidias\Core\Filesystem;
 
-class Shared implements Shared_Interface
+class Shared implements SharedInterface
 {
     private $_name;
     private $_dir;

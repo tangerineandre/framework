@@ -1,7 +1,7 @@
 <?php
 namespace Phidias\Component;
 
-class Authorization implements Authorization_Interface
+class Authorization implements AuthorizationInterface
 {
     public static function authorized($class, $method, $arguments = array())
     {

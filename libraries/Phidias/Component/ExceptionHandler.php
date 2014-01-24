@@ -5,7 +5,7 @@ use Phidias\Core\Environment;
 use Phidias\Core\Debug;
 use Phidias\Core\Configuration;
 
-class ExceptionHandler implements ExceptionHandler_Interface
+class ExceptionHandler implements ExceptionHandlerInterface
 {
     public static function handle(\Exception $e)
     {

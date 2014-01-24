@@ -1,8 +1,8 @@
 <?php
 namespace Phidias;
 
-use Phidias\Core\Configuration;
 use Phidias\Core\Debug;
+use Phidias\Component\Configuration;
 
 /*
  *

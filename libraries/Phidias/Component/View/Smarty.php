@@ -3,7 +3,7 @@ namespace Phidias\Component;
 
 include 'Smarty-3.1.13/libs/Smarty.class.php';
 
-class View_Smarty implements View_Interface
+class View_Smarty implements ViewInterface
 {
     private $smarty;
 
