@@ -10,7 +10,7 @@ class Object
     private static function getRootFolder()
     {
         $language = Configuration::get('environment.language');
-        return $language ? "specification/$language/class" : "specification/class";
+        return $language ? "specification/$language/classes" : "specification/classes";
     }
     
     public static function get($class)

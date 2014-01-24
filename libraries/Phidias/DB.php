@@ -251,7 +251,7 @@ class DB
         $resultSet  = $this->query($select->toSQL(TRUE));
         $retval     = $resultSet->fetch_assoc();
 
-        return isset($retval['count']) ? $retval['count'] : NULL;
+        return isset($retval['count']) ? (int)$retval['count'] : NULL;
     }
 
 

@@ -10,7 +10,7 @@ class API
     {
         $language = Configuration::get('environment.language');
 
-        return $language ? "specification/$language/API" : "specification/API";
+        return $language ? "specification/$language/resources" : "specification/resources";
     }
 
     public static function get($resource)

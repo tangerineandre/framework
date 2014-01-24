@@ -14,7 +14,11 @@ class Collection
     private $where;
     private $orderBy;
     private $groupBy;
+
+    /* Paging data */
     private $limit;
+    private $offset;
+    private $page;
 
     private $postFilters;
     private $preFilters;
@@ -137,6 +141,11 @@ class Collection
         return $this;
     }
 
+    public function getAttributes()
+    {
+        return array_keys($this->attributes);
+    }
+
     public function whereKey($keyValue)
     {
         $keyValue           = (array)$keyValue;
@@ -172,9 +181,53 @@ class Collection
 
     public function limit($limit)
     {
-        $this->limit = $limit;
+        $this->limit = $limit !== null ? max(1, (int)$limit) : null;
+
         return $this;
     }
+
+    public function getLimit()
+    {
+        return $this->limit;
+    }
+
+    /*
+    Set the result offset
+    This will override the page to match the offset
+    */
+    public function offset($offset)
+    {
+        $this->offset = max(0, (int)$offset);
+        $this->page   = $this->limit === null ? 1 : ( 1 + floor($this->offset / $this->limit) );
+
+        return $this;
+    }
+
+    public function getOffset()
+    {
+        return $this->offset;
+    }
+
+
+    /*
+    Set the page
+    This will override the offset to match the page
+    */
+    public function page($page)
+    {
+        $this->page   = max(1, (int)$page);
+        $this->offset = $this->limit === null ? 0 : $this->limit * ($this->page - 1);
+
+        return $this;
+    }
+
+    public function getPage()
+    {
+        return $this->page;
+    }
+
+
+
 
     public function match($attributeName, $value = NULL, $mongoOperator = '&eq')
     {
@@ -444,8 +497,12 @@ class Collection
             $select->join($join['type'], $nestedSelect, $conditions);
         }
 
-        if ($this->limit) {
-            $select->limit($this->limit);
+        if ($this->limit !== null) {
+            if ($this->offset !== null) {
+                $select->limit($this->offset, $this->limit);
+            } else {
+                $select->limit($this->limit);
+            }
         }
 
         return $select;

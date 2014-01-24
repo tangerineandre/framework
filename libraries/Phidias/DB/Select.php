@@ -97,9 +97,13 @@ class Select
         return $this;
     }
 
-    public function limit($value)
+    public function limit($offset, $value = NULL)
     {
-        $this->limit = $value;
+        if ($value !== null) {
+            $this->limit = "$offset, $value";
+        } else {
+            $this->limit = $offset;
+        }
 
         return $this;
     }
