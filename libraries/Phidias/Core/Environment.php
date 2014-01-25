@@ -130,6 +130,9 @@ class Environment
 
 
         /* TODO: Set view format from appropiate accepted mimetypes (meanwhile just set JSON when applies) */
+        $supportedTypes = Request::getBestSupportedMimeType();
+        dumpx($supportedTypes);
+
         if (Request::getBestSupportedMimeType(array('application/json', 'application/javascript'))) {
             Application::setLayout(FALSE);
             Configuration::set('view.format', 'json');

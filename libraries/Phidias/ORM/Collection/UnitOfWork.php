@@ -1,7 +1,7 @@
 <?php
 namespace Phidias\ORM\Collection;
 
-use Phidias\Core\Configuration;
+use Phidias\Component\Configuration;
 
 class UnitOfWork
 {
