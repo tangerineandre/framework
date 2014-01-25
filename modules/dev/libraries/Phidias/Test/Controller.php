@@ -29,7 +29,7 @@ class Phidias_Test_Controller extends Controller
         $channel->field('value');
         $select->join('left', $channel, "people_channels.person = people.id");
 
-        $select->orderBy('fullName');
+        $select->order('fullName');
         $select->groupBy('fullName');
 
         dump($select->toSQL());

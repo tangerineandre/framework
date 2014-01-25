@@ -1,9 +1,6 @@
 <?php
 namespace Phidias\Component;
 
-use Phidias\Core\Configuration;
-
-
 class Session implements SessionInterface
 {
     private static $_loaded = FALSE;

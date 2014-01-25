@@ -2,8 +2,8 @@
 namespace Phidias\Util\Specification;
 
 use Phidias\Core\Environment;
-use Phidias\Core\Configuration;
 use Phidias\Core\Debug;
+use Phidias\Component\Configuration;
 
 class Object
 {

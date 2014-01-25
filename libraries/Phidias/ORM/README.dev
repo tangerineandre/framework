@@ -632,7 +632,7 @@ $areas = Area::collection()
         ->nest('subjects', Subject::collection('mySubject')
                 ->select('name', 'foo')
                 ->where("mySubject.name LIKE '%0' OR mySubject.name LIKE '%1'")
-                ->orderBy('name DESC')
+                ->order('name DESC')
 
                 ->nest('indicators', Indicator::collection())
         )
