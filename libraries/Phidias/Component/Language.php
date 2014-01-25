@@ -1,8 +1,8 @@
 <?php
 namespace Phidias\Component;
 
-use Phidias\Core\Environment;
 use Phidias\Core\Debug;
+use Phidias\Core\Filesystem;
 
 class Language implements LanguageInterface
 {
@@ -10,25 +10,24 @@ class Language implements LanguageInterface
     private static $words           = array();
     private static $currentContext  = NULL;
 
-    public static function load($languageCode)
+    public static function load($languageCode, $context = NULL)
     {
-        Debug::startBlock("loading language '$languageCode'");
-
         self::$code = $languageCode;
-        $dictionaries = Environment::listDirectory(Environment::DIR_LANGUAGES."/$languageCode", TRUE, FALSE);
-        foreach ($dictionaries as $dictionaryFile) {
+
+        $dictionaryFolder   = $context."/languages/$languageCode";
+        $files              = Filesystem::listDirectory($dictionaryFolder, 1, 0);
+
+        foreach ($files as $dictionaryFile) {
+
             Debug::startBlock("loading language file '$dictionaryFile'", 'include');
 
-            $words = include $dictionaryFile;
+            $words = include $dictionaryFolder.'/'.$dictionaryFile;
             if (is_array($words)) {
-                $context = substr($dictionaryFile, 0, strpos($dictionaryFile, Environment::DIR_LANGUAGES."/$languageCode")-1);
-                Language::set($words, $context);
+                self::set($words, $context);
             }
 
             Debug::endBlock();
-        }
-
-        Debug::endBlock();        
+        }   
     }
 
     public static function useContext($source)
@@ -49,22 +48,20 @@ class Language implements LanguageInterface
     public static function set($words, $context = NULL)
     {
         if ($context === NULL) {
-            $context = self::$currentContext;
+            $context = 'default';
         }
 
-        $contextIndex = self::$currentContext !== NULL ? self::$currentContext : 'default';
-
-        if (!isset(self::$words[$contextIndex])) {
-            self::$words[$contextIndex] = $words;
+        if (!isset(self::$words[$context])) {
+            self::$words[$context] = $words;
         } else {
-            self::$words[$contextIndex] = array_merge(self::$words[$contextIndex], $words);
+            self::$words[$context] = array_merge(self::$words[$context], $words);
         }
     }
 
     public static function get($word)
     {
-        $contextIndex = self::$currentContext !== NULL ? self::$currentContext : 'default';
+        $context = self::$currentContext === NULL ? 'default' : self::$currentContext;
 
-        return isset(self::$words[$contextIndex][$word]) ? self::$words[$contextIndex][$word] : $word;
+        return isset(self::$words[$context][$word]) ? self::$words[$context][$word] : $word;
     }
 }

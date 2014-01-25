@@ -8,18 +8,17 @@ use Phidias\Component\Language;
 
 class Environment
 {
-    private static $modules     = array();
-    private static $components  = array();
-
+    private static $modules          = array();
+    private static $components       = array();
+    
     /* Module directory structure.  All paths are relative to the module root */
-    const DIR_LIBRARIES         = 'libraries';
-    const DIR_CONFIGURATION     = 'configuration';
-    const DIR_LANGUAGES         = 'languages';
-    const DIR_VIEWS             = 'views';
-    const DIR_LAYOUTS           = 'layouts';
-
-    private static $mainPublicURL       = NULL;
-    private static $modulePublicURLs    = array();
+    const DIR_LIBRARIES              = 'libraries';
+    const DIR_CONFIGURATION          = 'configuration';
+    const DIR_VIEWS                  = 'views';
+    const DIR_LAYOUTS                = 'layouts';
+    
+    private static $mainPublicURL    = NULL;
+    private static $modulePublicURLs = array();
 
     public static function component($componentName, $componentClass)
     {
@@ -49,6 +48,10 @@ class Environment
             Debug::enable();
         }
 
+        if (self::$mainPublicURL === NULL) {
+            self::$mainPublicURL = "http" . (isset($_SERVER["HTTPS"]) ? "s://" : "://") . $_SERVER['HTTP_HOST'];
+        }
+
         self::initialize();
 
         try {
@@ -73,8 +76,10 @@ class Environment
     {
         Debug::startBlock('initializing environment');
 
+
         /* Add the framework to the bottom of the stack */
         array_unshift(self::$modules, realpath(__DIR__.'/../../../'));
+
 
         /* Add invoking application to the top of the stack.
          * Environment::start() is being run from: [CURRENT APPLICATION]/public/index.php
@@ -116,11 +121,31 @@ class Environment
         /* Load configuration */
         Configuration::load();
 
+
         /* Set PHP INI variables from configuration */
         $iniVariables = Configuration::getAll("php.");
         foreach ($iniVariables as $iniKey => $iniValue) {
             ini_set($iniKey, $iniValue);
         }
+
+
+        /* TODO: Set view format from appropiate accepted mimetypes (meanwhile just set JSON when applies) */
+        if (Request::getBestSupportedMimeType(array('application/json', 'application/javascript'))) {
+            Application::setLayout(FALSE);
+            Configuration::set('view.format', 'json');
+            Configuration::set('view.extension', 'json');
+        }
+
+
+        /* Include dictionaries */
+        if ($languageCode = Configuration::get('environment.language')) {
+            Debug::startBlock("loading language '$languageCode'");
+            foreach (self::$modules as $context) {
+                Language::load($languageCode, $context);
+            }
+            Debug::endBlock();
+        }
+
 
         /* Set application layout */
         $layout = Configuration::get('environment.layout');
@@ -128,17 +153,6 @@ class Environment
             Application::setLayout($layout);
         }
 
-        /* Set appropiate response format */
-        if (Request::getBestSupportedMimeType(array('application/json', 'application/javascript'))) {
-            Application::setLayout(FALSE);
-            Configuration::set('view.format', 'json');
-            Configuration::set('view.extension', 'json');
-        }
-
-        /* Include dictionaries */
-        if ($languageCode = Configuration::get('environment.language')) {
-            Language::load($languageCode);
-        }
 
         /* Include all files in folders configured via environment.initialize.* */
         $initializationFolders = Configuration::getAll('environment.initialize.');
@@ -169,9 +183,9 @@ class Environment
             }
         }
 
-
         Debug::endBlock();
 
+        /* Flush debug data */
         Debug::flush();
     }
 

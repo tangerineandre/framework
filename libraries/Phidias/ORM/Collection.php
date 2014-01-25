@@ -172,7 +172,19 @@ class Collection
         return $this;
     }
 
-    public function orderBy($order, $parameters = NULL)
+    public function orderBy($attribute, $descending = FALSE)
+    {
+        if (in_array($attribute, array_keys($this->attributes))) {
+            $sortString = $descending ? 'DESC' : 'ASC';
+            $this->order("$this->alias.$attribute $sortString");
+        } else {
+            trigger_error("orderBy attribute '$attribute' not found", E_USER_WARNING);
+        }
+
+        return $this;
+    }
+
+    public function order($order, $parameters = NULL)
     {
         $this->orderBy[] = $parameters ? $this->db->bindParameters($order, $parameters) : $order;
 
