@@ -218,20 +218,70 @@ class Route
 
     }
 
-    public static function view($templateResource)
+
+
+    public static function view($view)
     {
-        if (($languageCode = Language::getCode()) && Configuration::get('route.template.prefixLanguage')) {
-            $targetFile = Environment::DIR_VIEWS."/".Configuration::get('view.format', 'html')."/".$languageCode."/$templateResource.".Configuration::get('view.extension', 'php');
-            $retval     = Environment::findFile($targetFile);
-            if ($retval) {
-                return $retval;
+        $acceptedContentTypes = HTTP\Request::getBestSupportedMimeType();
+
+        foreach ($acceptedContentTypes as $mimeType => $quality) {
+            if ($viewData = Route::viewOfType($view, $mimeType)) {
+                return $viewData;
             }
         }
 
-        $targetFile = Environment::DIR_VIEWS."/".Configuration::get('view.format', 'html')."/$templateResource.".Configuration::get('view.extension', 'php');
-
-        return Environment::findFile($targetFile);
+        return NULL;       
     }
+
+    /* Given a view identifier (e.g. "person/details") and a mimeType, return the full path to the corresponding file
+    and a View component suitable to render the file
+     */
+    private static function viewOfType($view, $mimeType)
+    {
+        $formats = Configuration::getAll('view.format.');
+
+        foreach ($formats as $configurationVariable => $value) {
+            $parts = explode('.', $configurationVariable);
+
+            if (isset($parts[1]) && $parts[1] == 'mimetypes' && is_array($value) && in_array($mimeType, $value)) {
+
+                $format    = $parts[0];
+                $folder    = Configuration::get("view.format.$format.folder");
+                $extension = Configuration::get("view.format.$format.extension", "php");
+                $component = Configuration::get("view.format.$format.component", "Phidias\Component\View");
+                
+                /* First, look for language specific file */
+                if ($languageCode = Language::getCode()) {
+                    $targetFile = "$folder/$languageCode/$view.$extension";
+                    $foundFile  = Environment::findFile($targetFile);
+                    if ($foundFile) {
+                        return array(
+                            'class'    => $component,
+                            'template' => $foundFile,
+                            'type'     => $mimeType,
+                            'url'      => Environment::getPublicURL(Environment::findModule($foundFile))
+                        );                        
+                    }
+                }
+
+                $targetFile = "$folder/$view.$extension";
+                $foundFile  = Environment::findFile($targetFile);
+                if ($foundFile) {
+                    return array(
+                        'class'    => $component,
+                        'template' => $foundFile,
+                        'type'     => $mimeType,
+                        'url'      => Environment::getPublicURL(Environment::findModule($foundFile))
+                    );                        
+                }
+
+            }
+        }
+
+        return NULL;
+    }
+
+
 
     public static function layout($layout)
     {

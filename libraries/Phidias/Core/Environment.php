@@ -16,7 +16,7 @@ class Environment
     const DIR_CONFIGURATION          = 'configuration';
     const DIR_VIEWS                  = 'views';
     const DIR_LAYOUTS                = 'layouts';
-    
+
     private static $mainPublicURL    = NULL;
     private static $modulePublicURLs = array();
 
@@ -56,12 +56,13 @@ class Environment
 
         try {
 
-            $resource       = Request::GET('_a', Configuration::get('controller.default'));
+            $resource       = Request::GET('_a', Configuration::get('resource.default'));
             $requestMethod  = Request::method();
             $attributes     = Request::GET();
+
             unset($attributes['_a']);
 
-            echo Application::run($resource, $requestMethod, $attributes);
+            echo Application::run($requestMethod, $resource, $attributes);
 
         } catch (\Exception $e) {
 
@@ -70,7 +71,6 @@ class Environment
 
         self::finalize();
     }
-
 
     private static function initialize()
     {
@@ -130,14 +130,13 @@ class Environment
 
 
         /* TODO: Set view format from appropiate accepted mimetypes (meanwhile just set JSON when applies) */
-        $supportedTypes = Request::getBestSupportedMimeType();
-        dumpx($supportedTypes);
+        //$supportedTypes = Request::getBestSupportedMimeType();
+        //dumpx($supportedTypes);
 
-        if (Request::getBestSupportedMimeType(array('application/json', 'application/javascript'))) {
-            Application::setLayout(FALSE);
-            Configuration::set('view.format', 'json');
-            Configuration::set('view.extension', 'json');
-        }
+        // if (Request::getBestSupportedMimeType(array('application/json', 'application/javascript'))) {
+        //     Configuration::set('view.format', 'json');
+        //     Configuration::set('view.extension', 'json');
+        // }
 
 
         /* Include dictionaries */
@@ -148,14 +147,6 @@ class Environment
             }
             Debug::endBlock();
         }
-
-
-        /* Set application layout */
-        $layout = Configuration::get('environment.layout');
-        if ($layout) {
-            Application::setLayout($layout);
-        }
-
 
         /* Include all files in folders configured via environment.initialize.* */
         $initializationFolders = Configuration::getAll('environment.initialize.');

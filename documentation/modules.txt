@@ -44,7 +44,7 @@ Por ejemplo, un llamado a $foo = new Some_Class_Foo; buscara la declaracion de l
 
 /layouts:
 Contiene archivos .phtml para ser usados como LAYOUT de la aplicación.  Phidias Framework empleará un layout cuando se ha especificado
-en la directiva de configuración "environment.layout"
+en la directiva de configuración "application.layout"
 
 /public:
 Esta carpeta debe contener todos los archivos publicos.  Es decir, aquellos que serán accedidos mediante una URL.

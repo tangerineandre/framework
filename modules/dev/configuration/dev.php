@@ -2,7 +2,7 @@
 return array(
     'application.language'  => 'en',
 
-    //'environment.layout'    => 'dev.phtml',
+    //'application.layout'    => 'dev.phtml',
 
     /* PHP.ini directives */
     'php.error_reporting'   => E_ALL,

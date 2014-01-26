@@ -1,8 +1,6 @@
 <?php
 namespace Phidias\Core;
 
-use Phidias\Component\View;
-
 class Debug
 {
     private static $enabled             = FALSE;
@@ -96,12 +94,14 @@ class Debug
             self::endBlock();
         }
 
-        $templateFile = Route::view("phidias/debugger");
+        $viewData = Route::view("phidias/debugger");
 
-        if ($templateFile) {
+        if ($viewData) {
 
-            $view = new View(Environment::getPublicURL(Environment::findModule($templateFile)));
+            $templateFile = $viewData['template'];
+            $viewClass    = $viewData['class'];
 
+            $view = new $viewClass($viewData['url']);
             $view->assign('messages',   self::$messages);
             $view->assign('peakMemory', memory_get_peak_usage());
             $view->assign('totalTime',  microtime(true) - self::$initialTimestamp);
