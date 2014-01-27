@@ -222,7 +222,7 @@ class Route
 
     public static function view($view)
     {
-        $acceptedContentTypes = HTTP\Request::getBestSupportedMimeType();
+        $acceptedContentTypes = Application::getContentTypes();
 
         foreach ($acceptedContentTypes as $mimeType => $quality) {
             if ($viewData = Route::viewOfType($view, $mimeType)) {
@@ -238,7 +238,7 @@ class Route
      */
     private static function viewOfType($view, $mimeType)
     {
-        $formats = Configuration::getAll('view.format.');
+        $formats = Configuration::getAll('phidias.route.view.');
 
         foreach ($formats as $configurationVariable => $value) {
             $parts = explode('.', $configurationVariable);
@@ -246,10 +246,10 @@ class Route
             if (isset($parts[1]) && $parts[1] == 'mimetypes' && is_array($value) && in_array($mimeType, $value)) {
 
                 $format    = $parts[0];
-                $folder    = Configuration::get("view.format.$format.folder");
-                $extension = Configuration::get("view.format.$format.extension", "php");
-                $component = Configuration::get("view.format.$format.component", "Phidias\Component\View");
-                
+                $folder    = Configuration::get("phidias.route.view.$format.folder");
+                $extension = Configuration::get("phidias.route.view.$format.extension", "php");
+                $component = Configuration::get("phidias.route.view.$format.component", "Phidias\Component\View");
+
                 /* First, look for language specific file */
                 if ($languageCode = Language::getCode()) {
                     $targetFile = "$folder/$languageCode/$view.$extension";
@@ -285,7 +285,7 @@ class Route
 
     public static function layout($layout)
     {
-        if (($languageCode = Language::getCode()) && Configuration::get('route.layout.prefixLanguage')) {
+        if (($languageCode = Language::getCode())) {
             $retval = Environment::findFile(Environment::DIR_LAYOUTS.'/'.$languageCode.'/'.$layout);
             if ($retval) {
                 return $retval;

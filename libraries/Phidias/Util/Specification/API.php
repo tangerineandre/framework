@@ -8,7 +8,7 @@ class API
 {
     private static function getRootFolder()
     {
-        $language = Configuration::get('environment.language');
+        $language = Configuration::get('phidias.environment.language');
 
         return $language ? "specification/$language/resources" : "specification/resources";
     }

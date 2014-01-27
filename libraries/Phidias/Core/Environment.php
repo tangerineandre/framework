@@ -1,7 +1,6 @@
 <?php
 namespace Phidias\Core;
 
-use Phidias\Core\HTTP\Request;
 use Phidias\Component\ExceptionHandler;
 use Phidias\Component\Configuration;
 use Phidias\Component\Language;
@@ -48,24 +47,20 @@ class Environment
             Debug::enable();
         }
 
-        if (self::$mainPublicURL === NULL) {
-            self::$mainPublicURL = "http" . (isset($_SERVER["HTTPS"]) ? "s://" : "://") . $_SERVER['HTTP_HOST'];
-        }
-
         self::initialize();
 
         try {
 
-            $resource       = Request::GET('_a', Configuration::get('resource.default'));
-            $requestMethod  = Request::method();
-            $attributes     = Request::GET();
-
+            $resource       = HTTP\Request::GET('_a');
+            $requestMethod  = HTTP\Request::method();
+            $attributes     = HTTP\Request::GET();
             unset($attributes['_a']);
+
+            Application::setContentTypes(HTTP\Request::getBestSupportedMimeType());
 
             echo Application::run($requestMethod, $resource, $attributes);
 
         } catch (\Exception $e) {
-
             echo ExceptionHandler::handle($e);
         }
 
@@ -76,9 +71,14 @@ class Environment
     {
         Debug::startBlock('initializing environment');
 
-
         /* Add the framework to the bottom of the stack */
         array_unshift(self::$modules, realpath(__DIR__.'/../../../'));
+
+
+        /* Determine the main public URL */
+        if (self::$mainPublicURL === NULL) {
+            self::$mainPublicURL = "http" . (isset($_SERVER["HTTPS"]) ? "s://" : "://") . $_SERVER['HTTP_HOST'];
+        }        
 
 
         /* Add invoking application to the top of the stack.
@@ -109,8 +109,8 @@ class Environment
                 trigger_error("component class '$componentClass' not found", E_USER_ERROR);
             }
 
-            $componentReflection = new ReflectionClass($componentClass);
-            if (!$componentReflection->implementsInterface("Phidias\Component\\$componentName\Interface")) {
+            $componentReflection = new \ReflectionClass($componentClass);
+            if (!$componentReflection->implementsInterface("Phidias\Component\\{$componentName}Interface")) {
                 trigger_error("component class '$componentClass' does not implement interface 'Phidias\Component\\$componentName\Interface'", E_USER_ERROR);
             }
 
@@ -121,26 +121,14 @@ class Environment
         /* Load configuration */
         Configuration::load();
 
-
         /* Set PHP INI variables from configuration */
         $iniVariables = Configuration::getAll("php.");
         foreach ($iniVariables as $iniKey => $iniValue) {
             ini_set($iniKey, $iniValue);
         }
 
-
-        /* TODO: Set view format from appropiate accepted mimetypes (meanwhile just set JSON when applies) */
-        //$supportedTypes = Request::getBestSupportedMimeType();
-        //dumpx($supportedTypes);
-
-        // if (Request::getBestSupportedMimeType(array('application/json', 'application/javascript'))) {
-        //     Configuration::set('view.format', 'json');
-        //     Configuration::set('view.extension', 'json');
-        // }
-
-
         /* Include dictionaries */
-        if ($languageCode = Configuration::get('environment.language')) {
+        if ($languageCode = Configuration::get('phidias.environment.language')) {
             Debug::startBlock("loading language '$languageCode'");
             foreach (self::$modules as $context) {
                 Language::load($languageCode, $context);
@@ -149,7 +137,7 @@ class Environment
         }
 
         /* Include all files in folders configured via environment.initialize.* */
-        $initializationFolders = Configuration::getAll('environment.initialize.');
+        $initializationFolders = Configuration::getAll('phidias.environment.initialize.');
         foreach ($initializationFolders as $folder) {
             $initializationFiles = self::listDirectory($folder, TRUE, FALSE);
             foreach ($initializationFiles as $initializationFile) {
@@ -167,7 +155,7 @@ class Environment
         Debug::startBlock("finalizing environment");
 
         /* Include all files in folders configured via environment.finalize.* */
-        $finalizationFolders = Configuration::getAll('environment.finalize.');
+        $finalizationFolders = Configuration::getAll('phidias.environment.finalize.');
         foreach ($finalizationFolders as $folder) {
             $finalizationFiles = self::listDirectory($folder, TRUE, FALSE);
             foreach ($finalizationFiles as $finalizationFile) {

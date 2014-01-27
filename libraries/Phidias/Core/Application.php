@@ -10,6 +10,17 @@ class Application
 {
     private static $depth  = -1;
     private static $stack  = array();
+    private static $contentTypes = array();
+
+    public static function setContentTypes($contentTypes)
+    {
+        self::$contentTypes = $contentTypes;
+    }
+
+    public static function getContentTypes()
+    {
+        return self::$contentTypes;
+    }
 
     public static function getDepth()
     {
@@ -31,16 +42,20 @@ class Application
         find the resource, authorize it, execute it and optionally wrap it
         in a layout.
     */
-    public static function run($requestMethod, $URI, $attributes = NULL)
+    public static function run($requestMethod, $URI = NULL, $attributes = NULL)
     {
+        if ($URI === NULL) {
+            $URI = Configuration::get('phidias.application.defaults.resource');
+        }
+
         $resource = new Resource($URI, $attributes);
 
         /* Increase depth */
         self::$depth++;
-        if (self::$depth > Configuration::get('application.max_depth')) {
+        if (self::$depth > Configuration::get('phidias.application.maxDepth')) {
             Debug::add("reached max depth");
             return;
-        }        
+        }
 
         /* Authorize resource */
         Debug::startBlock("authorizing '$URI'");
@@ -62,18 +77,6 @@ class Application
         }
 
         /* TODO: Wrap in layout, if applies */
-        $layout = Configuration::get('application.layout');
-        if (self::$depth == 0 && $layout) {
-            $layoutFile = Route::layout($layout);
-
-            if ($layoutFile) {
-                Debug::add("wrapping in layout '$layoutFile'");
-
-                Layout::set('output', $output);
-                $layout = new Layout($output, Environment::getPublicURL(Environment::findModule($layoutFile)));
-                $output = $layout->render($layoutFile);
-            }
-        }
 
         self::$depth--;
 
