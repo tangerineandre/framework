@@ -1,0 +1,170 @@
+$callbackExample = array('Person_Controller', 'collection', array());
+$callbackExample = array('Person_Controller', 'collection', NULL);
+
+In general, the callback is:
+array(
+	0 => 'class',
+	1 => 'method',
+	2 => 'arguments'
+)
+
+
+//A specific callback
+Route::forRequest('GET people')
+		->useCallback(array('Person_Controller', 'collection'))
+		->useTemplate('foo/bar');
+
+//The basic rule:
+Route::forRequest('*')
+
+	->useCallback(function($requestMethod, $requestResource) {
+		//get the class from the resource:  foo/bar/shoo => Foo_Bar_Shoo_Resource
+		//use the same request method:  Foo_Bar_Shoo_Resource::get(), Foo_Bar_Shoo_Resource::post() ... etc
+	})
+
+	->useTemplate(function($requestMethod, $requestResource, $callback, $callbackResponseType) {
+		//get the template from the CALLBACK:   Foo_Bar_Shoo_Controller::get() --->  foo/bar/shoo/get
+	});
+
+
+//What if we add another one ?
+Route::forRequest('*')
+
+	->useTemplate(function($requestMethod, $requestResource, $callback, $callbackResponseType) {
+		//match a template to the response type:   Phidias\ORM\Collection ----> phidias/orm/collection
+	});
+
+
+
+Siguiendo con el orden de la prioridad del entorno, la ultima regla declarada deberia ser la primera en ejecutarse (o sobreescribe la anterior ?)
+Idealmente, se ejecuta, se prueba y si falla se continua con la de siguiente prioridad.  Eso quiere decir que debe haber un VALIDADOR de callbacks
+
+
+
+Callbacks configurados:
+
+Request 				Callback
+GET people 				Person_Controller->collection()
+*						[closure] //clase "Resource"
+
+
+Templates configurados:
+
+Request  				Callback 		Type 		template
+GET people				*				*			foo/bar
+* 						* 				* 			[closure: encontrar a partir del callback]
+* 						* 				* 			[closure: encontrar a partir del tipo]
+
+
+Route::getTemplate('get', 'people', $callback, $type):
+Encuentra todas las posibles organizadas por prioridad
+
+
+
+Phidias\Core\Resource:
+
+$foo = new Resource($URI, $attributes);
+$foo->accept('.... mimetypes ....');
+
+$output = $foo->get();
+$output = $foo->post();
+....		  ->put();
+
+
+Internally:
+get --->  invoke('get', $URI, $attributes):
+
+1. get callbacks
+2. try them. use the first valid one  (Phidias\Core\Resource\Callback::isValid)
+3. get templates
+4. try them.  get first valid one   (Phidias\Core\Resource\Template::isValid).
+5. render the template in the most appropiate format
+
+
+
+Entonces, cual es la clase en la que yo quiero declarar mis controladores?   ..."controladores"...
+
+
+//use Phidias\?????????\Resource;
+use Phidias\Core\Resource\Controller;
+
+class People_Controller extends Controller
+{
+	public function get()
+	{
+		$people = Person::collection()
+					->search('san')
+					->limit(10)
+					->orderBy('lastName');
+
+		return $people;
+	}
+
+	public function post()
+	{
+		$newPerson = new Person;
+		$newPerson->setFrom(HTTP\Request::body());
+		$newPerson->save();
+
+		HTTP\Response::code(201);
+
+		return $newPerson;
+	}
+}
+
+
+sip... la clase es "Controller".  No es propiamente un "Resource", pues solo contiene la LOGICA del recurso.  El recurso completo tiene su plantilla, accept types y demas.
+Aqui solo estamos declarando la logica... el controlador.
+
+
+En ese orden de ideas:
+
+//The basic rule:
+Route::forRequest('*')
+
+	->useController(function($requestMethod, $requestResource) {
+		//get the class from the resource:  foo/bar/shoo => Foo_Bar_Shoo_Controller
+		//use the same request method:  Foo_Bar_Shoo_Controller::get(), Foo_Bar_Shoo_Controller::post() ... etc
+	})
+
+	->useTemplate(function($requestMethod, $requestResource, $controller, $modelType) {
+		//get the template from the CONTROLLER:   Foo_Bar_Shoo_Controller::get() --->  foo/bar/shoo/get
+	})
+
+	->useTemplate(function() {
+		//get the template from the model type
+	});
+
+
+Afianzando conceptos:
+
+El RECURSO (Resource) esta identificado por un URI y unos atributos
+El RECURSO tiene un CONTROLADOR asociado (a partir de reglas de enrutamiento).
+Este controlador es una funcion invocable que retorna un MODELO (cualquier variable de cualquier tipo)
+El RECURSO tiene una PLANTILLA asociada (a partir de reglas de enrutamiento).
+
+
+Una VISTA toma un MODELO y una PLANTILLA y lo renderiza en el FORMATO especificado
+
+La vista:
+
+$view = new View($model, $template);
+$view->as('application/json');
+
+
+Probando una plantilla:
+
+El enrutador nos ha dicho que las siguientes plantillas son las mas indicadas:
+
+people/collection
+phidias/orm/collection
+
+El recurso acepta los tipos application/json y text/html
+
+Es mas importante satisfacer el formato solicitado, antes que la plantilla sugerida.  
+Asi que, el orden de pruebas a realizar:
+
+people/collection viewed as application/json
+phidias/orm/collection viewed as application/json
+people/collection viewed as text/html
+phidias/orm/collection viewed as text/html
