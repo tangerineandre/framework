@@ -1,8 +1,8 @@
 <?php
 namespace Phidias\Component;
 
-use Phidias\Core\Environment;
-use Phidias\Core\Debug;
+use Phidias\Environment;
+use Phidias\Debug;
 
 class Configuration implements ConfigurationInterface
 {
@@ -65,5 +65,33 @@ class Configuration implements ConfigurationInterface
     public static function setAll($array)
     {
     	self::$variables = array_merge(self::$variables, $array);
+    }
+
+    public static function getObject($objectName)
+    {
+        $retval = new \stdClass;
+
+        foreach (self::getAll("$objectName.") as $variableName => $value) {
+            self::setObjectProperty($retval, $variableName, $value);
+        }
+
+        return $retval;
+    }
+
+    private static function setObjectProperty($object, $propertyName, $value)
+    {
+        $parts    = is_array($propertyName) ? $propertyName : explode('.', $propertyName);
+        $property = array_shift($parts);
+
+        if (!count($parts)) {
+            $object->$property = $value;
+            return;
+        }
+
+        if (!isset($object->$property)) {
+            $object->$property = new \stdClass;
+        }
+
+        self::setObjectProperty($object->$property, $parts, $value);
     }
 }

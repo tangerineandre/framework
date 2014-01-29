@@ -1,4 +1,4 @@
-<h1><?=$exception->getMessage()?></h1>
-<pre>
-   <?= print_r($exception, 1) ?>
-</pre>
+<h1><?=get_class($exception)?></h1>
+<p><?=$exception->getMessage()?></p>
+<pre><?= print_r($exception->getData(), 1) ?></pre>
+<pre><?= print_r($exception, 1) ?></pre>

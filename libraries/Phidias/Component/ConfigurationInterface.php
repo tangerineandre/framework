@@ -8,5 +8,5 @@ interface ConfigurationInterface
     public static function getAll($prefix = NULL);
     public static function set($variable, $value);
     public static function setAll($variables);
-    
+    public static function getObject($prefix);
 }

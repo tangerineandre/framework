@@ -1,7 +1,7 @@
 <?php
 return array(
 
-    'phidias.environment.language'           => 'es',     
+    'phidias.environment.language'           => 'en',     
     
     /* Initialization folders 
     * (there can be as many environment.initialize.* directives as needed)  */

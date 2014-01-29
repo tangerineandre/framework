@@ -1,0 +1,209 @@
+Phidias Framework v2.0
+
+Phidias Framework es un framework PHP de alto nivel para el desarrollo de aplicaciones web RESTful
+(http://en.wikipedia.org/wiki/Representational_state_transfer)
+
+
+
+Construyendo nuestra primera aplicación RESTful con Phidias:
+
+Vamos a configurar un servidor WEB que pueda manejar una petición GET al recurso "greeting"
+
+Para esto vamos a crear un MODULO de phidias.  Un MODULO es una carpeta que contiene todos los archivos y subcarpetas que componen nuestra aplicacion web.
+Detallaremos cada uno de esto a medida que los vayamos necesitando.
+
+Para empezar, crea una carpeta llamada "myModule", y en ella una subcarpeta titulada "public" que contenga un archivo "index.php"
+
+/myModule
+	/public
+		index.php
+
+(!) Esta guia asume el conocimiento necesario para instalar y configurar un servidor web (con PHP) y accederlo desde un
+navegador mediante una URL.
+
+Configura un servidor web que apunte hacia la carpeta "public" de tu nuevo MODULO.  
+Para esta guia asumiremos que la URL para acceder a esta carpeta es http://localhost/myModule/public/
+
+
+1. Definiendo un entorno de ejecución en index.php
+
+Para poner en marcha la aplicación es necesario incluir el framework, configurar el entorno de ejecución, y ejecutar la aplicación.
+
+Esto se define el archivo index.php, asi:
+
+<?php
+
+//Esta linea configura PHP con las reglas de autoload del estandar PSR-0 (http://www.php-fig.org/psr/psr-0/)
+include '[ruta hacia el framework]/loader.php';
+
+//Aca le decimos a nuestro script que utilize la clase de configuracion de entorno de Phidias Framework
+use Phidias\Environment as Environment;
+
+//y lo ponemos en marcha
+Environment::start();
+
+
+Si ejecutas esta aplicación (y todo lo demás está bien configurado) verás el recurso predeterminado de phidias ("/default"):
+"Welcome to Phidias"
+
+
+
+2. Configurando el entorno 
+
+Ahora vamos a modificar la configuración del entorno.  En este caso vamos a modificar el idioma.  Para esto crea una carpeta en tu módulo
+titulada "configuration", y dentro de ella un archivo llamado "environment.php".
+(*) Ver estructura de archivos de un modulo, carpeta "configuration"
+
+/myModule
+	/configuration
+		environment.php
+	/public
+		index.php
+
+
+environment.php:
+<?php
+return array(
+    'phidias.environment.language' => 'es',
+);
+
+
+Ahora al ejecutar la aplicación veras el mensaje "Bienvenido a Phidias" (o "Welcome to Phidias" si digitaste un idioma que aun no exista en tu modulo :))
+
+
+
+3. Creando un nuevo recurso
+
+Phidias Framework te permite describir RECURSOS utilizando el patron MVC. Cada RECURSO está compuesto por un controlador en donde se llevará a cabo la
+lógica asociada al recurso.  El RECURSO generará datos que llamaremos el MODELO, y finalmente una VISTA mostrará el MODELO en un formato especifico (html, json, etc).
+
+
+3.1. El controlador
+
+Para declarar la logica de ejecucion de un recurso (CONTROLADOR) debemos crear una nueva CLASE que extienda la clase \Phidias\Resource.
+
+Para esto crearemos el archivo /libraries/Greeting/Resource.php en nuestro modulo:
+
+/myModule
+	/libraries
+		/Greeting
+			Resource.php
+
+
+(*) Hasta el momento todo nuestro modulo se ve asi:
+/myModule
+	/configuration
+		environment.php
+	/libraries
+		/Greeting
+			Controller.php
+	/public
+		index.php
+
+
+
+y en el archivo instanciamos una clase que extienda la clase Controller del framework:
+
+
+libraries/Greeting/Controller.php:
+
+<?php
+use Phidias\Resource\Controller;
+
+class Greeting_Controller extends Controller
+{
+
+}
+
+
+en esta clase delararemos el método "get", que se ejecutará cuando se haga una petición GET al recurso "greeting":
+
+<?php
+use Phidias\Resource\Controller;
+
+class Greeting_Controller extends Controller
+{
+	public function get()
+	{
+		echo "Hello world!";
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+Una aplicación web restful recibe peticiones HTTP [request],
+ejecuta una lógica asociada [controller] la cual genera un conjunto de datos [model]
+que es luego asociado a una vista [view] que organiza el contenido para ser retornado [response].
+
+
+
+REQUESTS:
+
+e.g. Al digitar la siguiente URL en un navegador:
+http://myapp.com/blog/articles/politics/some-title?size=20&safe=1
+
+se ejecuta la siguiente petición HTTP:
+
+GET /blog/articles/politics/some-title?size=20&safe=1 HTTP/1.0
+
+En la cual se identifican los siguientes componentes
+
+GET                                 ----> método [method]
+blog/articles/politics/some-title   ----> recurso [resource]
+size=20&safe=1                      ----> atributos [attributes]
+
+La aplicación web establece un "mapeo de recursos" [resource mapping] mediante
+el cual determina un controlador [controller] encargado de ejecutar la lógica asociada al recurso [resource] solicitado
+
+El controlador [controller] es una función invocable compuesta por:
+
+Clase [controller class]
+Método [controller method] y
+Argumentos [controller arguments]
+
+
+MAPEO DE RECURSOS [resource mapping]
+
+Dentro de phidias framework se configuran "reglas de mapeo" [mapping rules] de la siguiente manera:
+
+'[resource pattern]' => array('[controller class]', '[controller method]')
+
+Cuando el recurso solicitado [resource] corresponde con el patron de recurso [resource pattern] de una regla [mapping rule]
+el sistema ejecuta la función invocable "controller method" de la clase "controller class".
+
+
+EJEMPLO:
+
+Se define en la aplicación la siguiente regla de mapeo:
+'articles' => array('Article_Controller', 'main')
+
+Cuando se recibe una petición HTTP a http://myapp.com/articles/
+se identifica que "articles" es el recurso a ejecutar.
+
+Al parear el recurso con la regla de mapeo el sistema ejecuta
+
+Article_Controller::main()
+
+
+Adicionalmente, en un patron de recurso se pueden definir wildcards o variables, que son
+enviadas como argumentos al controlador [controller] identificado, asi:
+
+
+EJEMPLO:
+
+Dada la siguiente regla de mapeo
+'articles/:title' => array('Article_Controller', 'details')
+
+Al recibir una peticion al recurso "articles/some-title" el sistema ejecuta
+
+Article_Controller::details('some-title')

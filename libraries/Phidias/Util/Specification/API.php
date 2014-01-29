@@ -1,7 +1,7 @@
 <?php
 namespace Phidias\Util\Specification;
 
-use Phidias\Core\Environment;
+use Phidias\Environment;
 use Phidias\Component\Configuration;
 
 class API

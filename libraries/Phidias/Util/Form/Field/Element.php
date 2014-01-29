@@ -1,7 +1,7 @@
 <?php
 namespace Phidias\Util\Form\Field;
 
-use Phidias\Core\Language;
+use Phidias\Language;
 
 class Element
 {

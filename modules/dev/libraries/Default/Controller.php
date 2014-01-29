@@ -1,9 +1,9 @@
 <?php
-use Phidias\Core\Controller;
+use Phidias\Resource\Controller;
 
 class Default_Controller extends Controller
 {
-    public function main()
+    public function get()
     {
     }
 }

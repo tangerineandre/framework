@@ -1,8 +1,8 @@
 <?php
 namespace Phidias\Component;
 
-use Phidias\Core\Environment;
-use Phidias\Core\Filesystem;
+use Phidias\Environment;
+use Phidias\Filesystem;
 
 class Shared implements SharedInterface
 {

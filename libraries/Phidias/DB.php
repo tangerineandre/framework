@@ -1,7 +1,7 @@
 <?php
 namespace Phidias;
 
-use Phidias\Core\Debug;
+use Phidias\Debug;
 use Phidias\Component\Configuration;
 
 /*

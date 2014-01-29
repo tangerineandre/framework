@@ -3,5 +3,5 @@ namespace Phidias\Component;
 
 interface AuthorizationInterface
 {
-    public static function authorized($requestMethod, $URI);
+    public static function authorized($URI, $requestMethod);
 }

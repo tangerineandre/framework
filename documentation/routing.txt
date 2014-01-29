@@ -202,3 +202,23 @@ Route::model($type, $builder);
 //finalmente
 Route::getController($request, $method); //retorna el callback: class, method y arguments
 Route::getView($template); //retorna la vista: component, template, type, publicURL
+
+
+
+------------------------------
+
+Vista:   "person/list" <--- view identifier
+
+Segun el FORMATO solicitado, la plantilla a renderizar puede ser:
+
+html:   views/html/person/list.phtml,  Template Component,  mimeType,  publicURL
+json:	views/json/person/list.json
+
+
+component: View
+
+View::isValid($identifier)
+
+
+$view = new View($identifier);
+$output = $view->render($model);

@@ -1,0 +1,15 @@
+<?php
+
+$output           = new stdClass;
+$output->elements = $model->find()->toArray();
+$output->count    = count($output->elements);
+$output->total    = isset($donNotCount) ? $output->count : $model->count();
+$output->limit    = $model->getLimit();
+$output->offset   = $model->getOffset();
+$output->page     = $model->getPage();
+
+$output->pages    = $output->limit === null ? 1 : ceil($output->total / $output->limit);
+$output->start    = $output->count > 0 ? $output->offset + 1 : 0;
+$output->end      = $output->count > 0 ? $output->offset + $output->count : 0;
+
+echo json_encode($output);

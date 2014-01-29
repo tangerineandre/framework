@@ -1,8 +1,8 @@
 <?php
 namespace Phidias\Util\Specification;
 
-use Phidias\Core\Environment;
-use Phidias\Core\Debug;
+use Phidias\Environment;
+use Phidias\Debug;
 use Phidias\Component\Configuration;
 
 class Object

@@ -1,37 +1,31 @@
 <?php
 namespace Phidias\Component;
 
-use Phidias\Core\Route;
-use Phidias\Core\Debug;
+use Phidias\Debug;
+use Phidias\View;
+use Phidias\HTTP;
 
 class ExceptionHandler implements ExceptionHandlerInterface
 {
-    public static function handle(\Exception $e)
+    public static function handle(\Exception $exception)
     {
         Debug::collapseAll();
-
-        Debug::add($e->getMessage(), 'error');
+        Debug::add($exception->getMessage(), 'error');
 
         $output = NULL;
 
-        $exceptionView = str_replace(array('_','\\'), '/', strtolower( str_replace('_Exception', '', get_class($e)) ));
-        $viewData      = Route::view($exceptionView);
-        
-        if ($viewData === NULL) {
-            $exceptionView = "exceptions/default";
-            $viewData      = Route::view($exceptionView);
-        }
+        $exceptionTemplate = str_replace(array('_','\\'), '/', strtolower( str_replace('_Exception', '', get_class($exception)) ));
 
-        /* No view for this exception found anywhere */
-        if ($viewData === NULL) {
-            $output = dump($e, TRUE);
-        } else {
-            $templateFile   = $viewData['template'];
-            $viewClass      = $viewData['class'];
-            $viewObject     = new $viewClass($viewData['url']);
-            $viewObject->assign('exception', $e);
+        $view = new View;
+        $view->templates(array($exceptionTemplate, "exceptions/default"));
+        $view->acceptTypes(HTTP\Request::getBestSupportedMimeType());
 
-            $output = $viewObject->fetch($templateFile);
+        $view->set('exception', $exception);
+
+        $output = $view->render();
+
+        if (!$output) {
+            $output = dump($exception, TRUE);
         }
 
         return $output;

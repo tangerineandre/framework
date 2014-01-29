@@ -1,7 +1,7 @@
 <?php
 namespace Phidias\ORM\Scaffold;
 
-use Phidias\Core\Filesystem;
+use Phidias\Filesystem;
 
 class Entity
 {

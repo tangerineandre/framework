@@ -1,7 +1,7 @@
 <?php
 namespace Phidias;
 
-use Phidias\Core\HTTP\Response;
+use Phidias\HTTP\Response;
 
 class Exception extends \Exception
 {

@@ -2,7 +2,7 @@
 namespace Phidias\Util\Form\Field\Element;
 
 use Phidias\Util\Form\Field\Element;
-use Phidias\Core\HTTP\Request;
+use Phidias\HTTP\Request;
 
 class Captcha extends Element
 {

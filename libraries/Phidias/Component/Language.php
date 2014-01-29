@@ -1,8 +1,8 @@
 <?php
 namespace Phidias\Component;
 
-use Phidias\Core\Debug;
-use Phidias\Core\Filesystem;
+use Phidias\Debug;
+use Phidias\Filesystem;
 
 class Language implements LanguageInterface
 {

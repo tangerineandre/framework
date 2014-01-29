@@ -61,7 +61,7 @@ Encuentra todas las posibles organizadas por prioridad
 
 
 
-Phidias\Core\Resource:
+Phidias\Resource:
 
 $foo = new Resource($URI, $attributes);
 $foo->accept('.... mimetypes ....');
@@ -72,12 +72,12 @@ $output = $foo->post();
 
 
 Internally:
-get --->  invoke('get', $URI, $attributes):
+get --->  run('get', $URI, $attributes):
 
 1. get callbacks
-2. try them. use the first valid one  (Phidias\Core\Resource\Callback::isValid)
+2. try them. use the first valid one  (Phidias\Resource\Callback::isValid)
 3. get templates
-4. try them.  get first valid one   (Phidias\Core\Resource\Template::isValid).
+4. try them.  get first valid one   (Phidias\Resource\Template::isValid).
 5. render the template in the most appropiate format
 
 
@@ -86,7 +86,7 @@ Entonces, cual es la clase en la que yo quiero declarar mis controladores?   ...
 
 
 //use Phidias\?????????\Resource;
-use Phidias\Core\Resource\Controller;
+use Phidias\Resource\Controller\Controller;
 
 class People_Controller extends Controller
 {
@@ -168,3 +168,26 @@ people/collection viewed as application/json
 phidias/orm/collection viewed as application/json
 people/collection viewed as text/html
 phidias/orm/collection viewed as text/html
+
+
+
+$view = new View;
+$view->template('phidias/debugger');
+$view->accept('text/html');
+$view->set('model', $model);
+
+$output = $view->render();
+
+
+//tambien:
+
+$view = new View;
+$view->set('model', $model);
+$view->template('phidias/debugger');
+$output = $view->render();
+
+//pero mejor todavia,
+
+$view = new View;
+$view->set('model', $model);
+$output = $view->render();

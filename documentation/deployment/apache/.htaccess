@@ -1,0 +1,4 @@
+RewriteEngine on
+RewriteBase /api
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule (.*) index.php?_a=$1&%{QUERY_STRING} [L]

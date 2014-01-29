@@ -2,7 +2,7 @@
 namespace Phidias\Util\Form\Field\Element;
 
 use Phidias\Util\Form\Field\Element;
-use Phidias\Core\Language;
+use Phidias\Language;
 
 class RadioGroup extends Element
 {

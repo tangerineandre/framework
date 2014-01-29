@@ -1,6 +1,6 @@
 <?php
-use Phidias\Core\Controller;
-use Phidias\Core\Environment;
+use Phidias\Resource\Controller;
+use Phidias\Environment;
 
 class Phidias_Orm_Controller extends Controller
 {
