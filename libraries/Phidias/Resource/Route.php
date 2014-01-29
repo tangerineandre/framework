@@ -23,7 +23,10 @@ e.g.: array("Person_Controller", "get")
 
 */
 
-namespace Phidias;
+namespace Phidias\Resource;
+
+use Phidias\HTTP\Request;
+use Phidias\Debug;
 
 use Phidias\Component\Configuration;
 use Phidias\Component\Language;
@@ -44,8 +47,8 @@ class Route
                 'controller'        => 2
             ));
 
-            self::$controllerStorage->useCompareFunction('requestMethod', array('Phidias\Route', 'matchesMethod'));
-            self::$controllerStorage->useCompareFunction('resourcePattern', array('Phidias\Route', 'matchesPattern'));
+            self::$controllerStorage->useCompareFunction('requestMethod', array('Phidias\Resource\Route', 'matchesMethod'));
+            self::$controllerStorage->useCompareFunction('resourcePattern', array('Phidias\Resource\Route', 'matchesPattern'));
 
         }
 
@@ -59,8 +62,8 @@ class Route
                 'modelType'       => 1
             ));
 
-            self::$templateStorage->useCompareFunction('requestMethod', array('Phidias\Route', 'matchesMethod'));
-            self::$templateStorage->useCompareFunction('resourcePattern', array('Phidias\Route', 'matchesPattern'));
+            self::$templateStorage->useCompareFunction('requestMethod', array('Phidias\Resource\Route', 'matchesMethod'));
+            self::$templateStorage->useCompareFunction('resourcePattern', array('Phidias\Resource\Route', 'matchesPattern'));
 
         }
 
@@ -257,7 +260,7 @@ class Route
         $requestMethod         = trim($parts[0]);
         $resourcePattern       = trim($parts[1]);
         
-        $this->requestMethod   = HTTP\Request::sanitizeMethod($requestMethod);
+        $this->requestMethod   = Request::sanitizeMethod($requestMethod);
         $this->resourcePattern = $resourcePattern;
 
         return $this;

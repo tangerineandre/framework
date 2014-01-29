@@ -1,5 +1,5 @@
 <?php
-use Phidias\Route;
+use Phidias\Resource\Route;
 
 
 /*

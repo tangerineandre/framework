@@ -11,6 +11,7 @@ returning the rendered view
 */
 namespace Phidias;
 
+use Phidias\Resource\Route;
 
 use Phidias\Component\Configuration;
 use Phidias\Component\Language;

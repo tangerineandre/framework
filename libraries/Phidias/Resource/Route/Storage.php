@@ -33,7 +33,7 @@ will return a list of stored objects that match the queried attributes ordered b
 
 */
 
-namespace Phidias\Route;
+namespace Phidias\Resource\Route;
 
 class Storage
 {
