@@ -73,7 +73,7 @@ class Application
         Debug::endBlock();
 
         if (self::$depth === 0 && $contentType) {
-            HTTP\Response::header('Content-Type', $contentType);
+            HTTP\Response::contentType($contentType);
         }
 
         self::$depth--;

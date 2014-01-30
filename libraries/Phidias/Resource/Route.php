@@ -256,12 +256,13 @@ class Route
             $this->resourcePattern = NULL;
             return $this;
         }
+
         $parts                 = explode(' ', $requestString);
         $requestMethod         = trim($parts[0]);
         $resourcePattern       = trim($parts[1]);
         
-        $this->requestMethod   = Request::sanitizeMethod($requestMethod);
-        $this->resourcePattern = $resourcePattern;
+        $this->requestMethod   = $requestMethod == '*' ? NULL : Request::sanitizeMethod($requestMethod);
+        $this->resourcePattern = $resourcePattern == '*' ? NULL : $resourcePattern;
 
         return $this;
     }

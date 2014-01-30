@@ -11,8 +11,8 @@ class Persistent
 
     public static function singleton()
     {
-        $class = get_called_class();
         if (!isset(self::$singleton)) {
+            $class           = get_called_class();
             self::$singleton = new $class;
         }
 

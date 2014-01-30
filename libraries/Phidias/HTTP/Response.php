@@ -3,14 +3,21 @@ namespace Phidias\HTTP;
 
 class Response
 {
-    public static function header($header_name, $header_value = NULL)
+    public static function header($headerName, $headerValue = NULL)
     {
-        if ( $header_value === NULL ) {
-            header($header_name);
+        if ( $headerValue === NULL ) {
+            header($headerName);
             return;
         }
 
-        header($header_name.': '.$header_value);
+        header($headerName.': '.$headerValue);
+    }
+
+    public static function contentType($contentType)
+    {
+        if ($contentType !== NULL) {
+            self::header('Content-Type', $contentType);
+        }
     }
 
     public static function code($code, $text = NULL)

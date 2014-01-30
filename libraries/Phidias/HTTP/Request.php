@@ -3,6 +3,18 @@ namespace Phidias\HTTP;
 
 class Request
 {
+    public static function data($variable = NULL, $defaultValue = NULL)
+    {
+        $inputJSON = json_decode(file_get_contents('php://input'));
+        $inputPOST = isset($_POST) ? $_POST : NULL;
+
+        if ($variable === NULL) {
+            return $inputJSON !== NULL ? $inputJSON : $inputPOST;
+        }
+
+        return isset($inputJSON->$variable) ? $inputJSON->$variable : (isset($inputPOST[$variable]) ? $inputPOST[$variable] : $defaultValue);
+    }
+
     public static function GET($name = FALSE, $onEmpty = NULL)
     {
         if (!$name) {
@@ -71,7 +83,7 @@ class Request
         //Sanitize Request method
         $requestMethod = strtolower(trim($requestMethod));
         if (!in_array($requestMethod, self::getValidMethods())) {
-            return 'get';
+            return NULL;
         }
 
         return $requestMethod;

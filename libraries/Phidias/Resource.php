@@ -109,10 +109,9 @@ class Resource
 
         $templates = Route::getTemplates($requestMethod, $this->URI, $validController, $modelType);
 
-        if (!count($templates)) {
-            Debug::add("no templates found.  Returning stdOut");
-            return $stdOut;
-        }
+        /* Use template "model" as last resort */
+        $templates[] = "model";
+
 
         $view = new View;
         $view->templates($templates);

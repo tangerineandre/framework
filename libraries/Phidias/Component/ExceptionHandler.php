@@ -24,10 +24,11 @@ class ExceptionHandler implements ExceptionHandlerInterface
 
         $output = $view->render();
 
-        if (!$output) {
-            $output = dump($exception, TRUE);
+        if ($output) {
+            HTTP\Response::contentType($view->getContentType());
+            return $output;
         }
 
-        return $output;
+        return dump($exception, TRUE);
     }
 }
