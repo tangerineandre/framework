@@ -49,7 +49,6 @@ class Route
 
             self::$controllerStorage->useCompareFunction('requestMethod', array('Phidias\Resource\Route', 'matchesMethod'));
             self::$controllerStorage->useCompareFunction('resourcePattern', array('Phidias\Resource\Route', 'matchesPattern'));
-
         }
 
 
@@ -92,21 +91,34 @@ class Route
             'resourcePattern' => $requestResource
         ));
 
-        foreach ($matches as $key => $matchingController) {
-
+        foreach ($matches as $recordId => $matchingController) {
 
             if (gettype($matchingController) === 'object' && is_callable($matchingController)) {
 
                 $builtController = call_user_func_array($matchingController, array($requestMethod, $requestResource));
                 if (!$builtController) {
-                    unset($matches[$key]);
+                    unset($matches[$recordId]);
                     continue;
                 }
-                $matches[$key] = $builtController;
-                $controlerString = $matches[$key][0].'->'.$matches[$key][1].'() * generated from route function';
+                $matches[$recordId] = $builtController;
+                $controlerString = $matches[$recordId][0].'->'.$matches[$recordId][1].'() * generated from route function';
 
             } else {
-                $controlerString = $matches[$key][0].'->'.$matches[$key][1].'()';
+                $controlerString = $matches[$recordId][0].'->'.$matches[$recordId][1].'()';
+            }
+
+
+            /* See if stored resource pattern contains any arguments */
+            $recordAttributes = self::$controllerStorage->getRecordAttributes($recordId);
+            if ($recordAttributes['resourcePattern'] !== NULL) {
+                
+                $matchedArguments = self::getMatchingArguments($recordAttributes['resourcePattern'], $requestResource);
+                
+                if ($matchedArguments !== NULL) {
+                    $controllerArguments   = isset($matches[$recordId][2]) ? $matches[$recordId][2] : array();
+                    $matches[$recordId][2] = array_merge($matchedArguments, $controllerArguments);
+                }
+
             }
 
             Debug::add("possible controller '$controlerString'");
@@ -187,6 +199,10 @@ class Route
         $patternParts = explode('/', $pattern);
         $queryParts   = explode('/', $string);
 
+        if (count($patternParts) !== count($queryParts)) {
+            return FALSE;
+        }
+
         foreach ($patternParts as $key => $patternPart) {
 
             if ($patternPart === '*') {
@@ -211,6 +227,28 @@ class Route
     public static function matchesMethod($pattern, $method)
     {
         return in_array(strtolower(trim($method)), explode('|', trim(strtolower($pattern))));
+    }
+
+
+
+    public static function getMatchingArguments($pattern, $string)
+    {
+        $matchedArguments = array();
+        
+        $patternParts     = explode('/', $pattern);
+        $queryParts       = explode('/', $string);
+
+        if (count($patternParts) !== count($queryParts)) {
+            return array();
+        }
+
+        foreach ($patternParts as $key => $patternPart) {
+            if (substr($patternPart, 0, 1) == ':') {
+                $matchedArguments[substr($patternPart, 1)] = $queryParts[$key];
+            }            
+        }
+
+        return $matchedArguments;
     }
 
 

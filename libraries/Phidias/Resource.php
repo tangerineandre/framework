@@ -73,7 +73,7 @@ class Resource
 
         $controllerClass        = $validController[0];
         $controllerMethod       = $validController[1];
-        $controllerArguments    = (isset($validController[1]) && is_array($validController[1])) ? $validController[1] : array();
+        $controllerArguments    = (isset($validController[2]) && is_array($validController[2])) ? $validController[2] : array();
 
 
         /* validate number of arguments */

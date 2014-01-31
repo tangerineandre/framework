@@ -103,10 +103,15 @@ class Storage
 		arsort($orderGuide);
 
 		foreach ($orderGuide as $recordId => $scope) {
-			$sortedCandidates[] = $candidates[$recordId];
+			$sortedCandidates[$recordId] = $candidates[$recordId];
 		}
 
 		return $sortedCandidates;
+	}
+
+	public function getRecordAttributes($recordId)
+	{
+		return isset($this->table[$recordId]) ? $this->table[$recordId]['attributes'] : NULL;
 	}
 
 
