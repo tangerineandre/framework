@@ -1,0 +1,6 @@
+<?php 
+$output           = new stdClass;
+$output->elements = $model->toArray();
+$output->total    = count($output->elements);
+
+echo json_encode($output);
