@@ -5,11 +5,12 @@ class Request
 {
     public static function data($variable = NULL, $defaultValue = NULL)
     {
-        $inputJSON = json_decode(file_get_contents('php://input'));
-        $inputPOST = isset($_POST) ? $_POST : NULL;
+        $inputRAW  = file_get_contents('php://input');
+        $inputJSON = json_decode($inputRAW);
+        $inputPOST = isset($_POST) && !empty($_POST) ? $_POST : NULL;
 
         if ($variable === NULL) {
-            return $inputJSON !== NULL ? $inputJSON : $inputPOST;
+            return $inputJSON !== NULL ? $inputJSON : ($inputPOST !== NULL ? $inputPOST : $inputRAW);
         }
 
         return isset($inputJSON->$variable) ? $inputJSON->$variable : (isset($inputPOST[$variable]) ? $inputPOST[$variable] : $defaultValue);

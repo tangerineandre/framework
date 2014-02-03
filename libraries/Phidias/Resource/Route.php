@@ -299,7 +299,7 @@ class Route
         $requestMethod         = trim($parts[0]);
         $resourcePattern       = trim($parts[1]);
         
-        $this->requestMethod   = $requestMethod == '*' ? NULL : Request::sanitizeMethod($requestMethod);
+        $this->requestMethod   = $requestMethod == '*' ? NULL : $requestMethod;
         $this->resourcePattern = $resourcePattern == '*' ? NULL : $resourcePattern;
 
         return $this;

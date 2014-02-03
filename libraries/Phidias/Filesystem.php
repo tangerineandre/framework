@@ -40,6 +40,32 @@ class Filesystem
         return $retval;
     }
 
+
+    public static function createDirectory($dir, $perms = 0777)
+    {
+        if (self::isDirectory($dir)) {
+            return TRUE;
+        }
+
+        $arrpath    = explode('/', $dir);
+        $intdir     = NULL;
+
+        for($cont=0; $cont < count($arrpath); $cont++) {
+            $intdir .= $arrpath[$cont].'/';
+            if(!is_dir($intdir)) {
+                $oldumask = umask(0);
+                if (!mkdir($intdir, $perms)) {
+                    return FALSE;
+                }
+                umask($oldumask);
+            }
+        }
+
+        chmod($dir, $perms);
+        return TRUE;
+    }
+
+
     public static function rmdir($dir)
     {
         foreach(glob($dir . '/*') as $file) {
@@ -80,22 +106,7 @@ class Filesystem
 
     public static function mktree($dir, $perms = 0777)
     {
-        $arrpath    = explode('/', $dir);
-        $intdir     = NULL;
-
-        for($cont=0; $cont < count($arrpath); $cont++) {
-            $intdir .= $arrpath[$cont].'/';
-            if(!is_dir($intdir)) {
-                $oldumask = umask(0);
-                if (!mkdir($intdir, $perms)) {
-                    return false;
-                }
-                umask($oldumask);
-            }
-        }
-
-        chmod($dir, $perms);
-        return true;
+        return $this->createDirectory($dir, $perms);
     }
 
     public static function putContents($filename, $data, $flags = 0)

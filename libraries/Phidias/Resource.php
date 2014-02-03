@@ -70,7 +70,6 @@ class Resource
             throw new Resource\Exception\MethodNotImplemented(array('resource' => $this->URI, 'method' => $requestMethod));
         }
 
-
         $controllerClass        = $validController[0];
         $controllerMethod       = $validController[1];
         $controllerArguments    = (isset($validController[2]) && is_array($validController[2])) ? $validController[2] : array();
@@ -83,7 +82,6 @@ class Resource
         if (count($controllerArguments) < $requiredArgumentCount) {
             throw new Resource\Exception\WrongArgumentCount(array('expected' => $requiredArgumentCount));
         }
-
 
 
         /* Ready to go! Run controller */
@@ -100,6 +98,11 @@ class Resource
         Language::useContext($languagePreviousContext);
         Debug::endBlock();
 
+
+        /* Produced output instead of model */
+        if ($stdOut !== NULL && $model === NULL) {
+            return $stdOut;
+        }
 
         /* Look for the template */
         $modelType = gettype($model);
