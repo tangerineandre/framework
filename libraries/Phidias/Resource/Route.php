@@ -91,6 +91,7 @@ class Route
             'resourcePattern' => $requestResource
         ));
 
+
         foreach ($matches as $recordId => $matchingController) {
 
             if (gettype($matchingController) === 'object' && is_callable($matchingController)) {
@@ -113,10 +114,24 @@ class Route
             if ($recordAttributes['resourcePattern'] !== NULL) {
                 
                 $matchedArguments = self::getMatchingArguments($recordAttributes['resourcePattern'], $requestResource);
-                
+
                 if ($matchedArguments !== NULL) {
-                    $controllerArguments   = isset($matches[$recordId][2]) ? $matches[$recordId][2] : array();
-                    $matches[$recordId][2] = array_merge($matchedArguments, $controllerArguments);
+
+                    $matchedArgumentsKeys = array_keys($matchedArguments);
+
+                    /* Merge parsed arguments into controller arguments */
+                    if (!isset($matches[$recordId][2])) {
+                        $matches[$recordId][2] = array();
+                    }
+
+                    foreach ($matches[$recordId][2] as &$argumentValue) {
+                        $argumentValue = str_replace($matchedArgumentsKeys, $matchedArguments, $argumentValue);
+                    }
+
+
+                    /* Merge parsed arguments into controller class and method */
+                    $matches[$recordId][0] = str_replace($matchedArgumentsKeys, $matchedArguments, $matches[$recordId][0]);
+                    $matches[$recordId][1] = str_replace($matchedArgumentsKeys, $matchedArguments, $matches[$recordId][1]);
                 }
 
             }
@@ -185,13 +200,14 @@ class Route
 
     /* Must indicate if a string conforms to a pattern:
 
-    string      pattern     matches
-    people      people      1
-    people/4    people/:id  1
-    people/4    people/*    1
-    people/4    *           1
-    people/4/5  people/*    1
-    4/dada      :foo/dada   1
+    pattern                     string                  isMatch
+    foo                         foo                     1
+    foo/bar                     foo/bar                 1
+    foo/:var                    foo/x                   1
+    foo/:var                    foo/y                   1
+    foo/:var1/:var2             foo/x/y                 1
+    foo/:var1/*remains          foo/a/1/2/3             1
+    foo/:var1/*remains          foo/a                   0
 
     */
     public static function matchesPattern($pattern, $string)
@@ -199,27 +215,29 @@ class Route
         $patternParts = explode('/', $pattern);
         $queryParts   = explode('/', $string);
 
-        if (count($patternParts) !== count($queryParts)) {
-            return FALSE;
-        }
+        foreach ($queryParts as $key => $queryPart) {
 
-        foreach ($patternParts as $key => $patternPart) {
+            if (!isset($patternParts[$key])) {
+                return FALSE;
+            }
 
-            if ($patternPart === '*') {
+            $patternPart = $patternParts[$key];
+
+            if (substr($patternPart, 0, 1) === '*') {
                 return TRUE;
             }
 
-            if (substr($patternPart, 0, 1) == ':') {
+            if (substr($patternPart, 0, 1) === ':') {
                 continue;
             }
 
-            if (!isset($queryParts[$key]) || $queryParts[$key] !== $patternPart) {
+            if ($queryPart !== $patternPart) {
                 return FALSE;
             }
 
         }
 
-        return TRUE;
+        return count($patternParts) == count($queryParts);
     }
 
     //i.e.  matchesMethod('get|PosT|PUT', 'GET') --> true
@@ -238,14 +256,17 @@ class Route
         $patternParts     = explode('/', $pattern);
         $queryParts       = explode('/', $string);
 
-        if (count($patternParts) !== count($queryParts)) {
-            return array();
-        }
-
         foreach ($patternParts as $key => $patternPart) {
-            if (substr($patternPart, 0, 1) == ':') {
-                $matchedArguments[substr($patternPart, 1)] = $queryParts[$key];
-            }            
+
+            if (substr($patternPart, 0, 1) === '*') {
+                $matchedArguments[$patternPart] = implode('/', array_slice($queryParts, $key));
+                return $matchedArguments;
+            }
+
+            if (substr($patternPart, 0, 1) === ':') {
+                $matchedArguments[$patternPart] = $queryParts[$key];
+            }
+
         }
 
         return $matchedArguments;

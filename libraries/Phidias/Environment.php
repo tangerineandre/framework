@@ -15,6 +15,7 @@ class Environment
     const DIR_CONFIGURATION          = 'configuration';
     const DIR_VIEWS                  = 'views';
     const DIR_LAYOUTS                = 'layouts';
+    const DIR_TEMP                   = 'temp';
 
     private static $mainPublicURL    = NULL;
     private static $modulePublicURLs = array();
@@ -171,6 +172,10 @@ class Environment
 
 
     /* The following functions handle finding and listing files from the current module stack */
+    public static function realPath($folder)
+    {
+        return realpath('../')."/$folder";
+    }
 
 
     public static function autoload($class)

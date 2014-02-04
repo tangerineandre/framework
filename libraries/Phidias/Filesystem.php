@@ -65,6 +65,16 @@ class Filesystem
         return TRUE;
     }
 
+    public static function getSize($filename)
+    {
+        return filesize($filename);
+    }
+
+
+    public static function delete($file)
+    {
+        return self::isFile($file) ? unlink($file) : FALSE;
+    }
 
     public static function rmdir($dir)
     {

@@ -58,13 +58,15 @@ class Storage
 		}
 
 		$this->root = $rootPath . '/' . trim($root, '/');
-
-		Filesystem::createDirectory($this->root);
 	}
 
 	private function sanitizeTarget($target)
 	{
 		$target = $this->root.'/'.trim($target, '/');
+
+		$dirname = dirname($target);
+		Filesystem::createDirectory($dirname);
+
 
 		return $target;
 	}
@@ -82,6 +84,11 @@ class Storage
 	public function isDirectory($directory)
 	{
 		return Filesystem::isDirectory($this->sanitizeTarget($directory));
+	}
+
+	public function getSize($file)
+	{
+		return Filesystem::getSize($this->sanitizeTarget($file));
 	}
 
 	public function filePutContents($filename, $data)
