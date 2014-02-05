@@ -58,7 +58,7 @@ class Phidias_Orm_Controller extends Controller
         return $organized;
     }
 
-    public function create()
+    public function getCreate()
     {
         $entities = self::getEntities($this->attributes->get('prefix'));
 
@@ -71,7 +71,7 @@ class Phidias_Orm_Controller extends Controller
         }
     }
 
-    public function drop()
+    public function getDrop()
     {
         $entities = self::getEntities($this->attributes->get('prefix'));
 

@@ -91,7 +91,6 @@ class Route
             'resourcePattern' => $requestResource
         ));
 
-
         foreach ($matches as $recordId => $matchingController) {
 
             if (gettype($matchingController) === 'object' && is_callable($matchingController)) {
@@ -109,6 +108,10 @@ class Route
             }
 
 
+            if (!isset($matches[$recordId][2]) || !is_array($matches[$recordId][2])) {
+                $matches[$recordId][2] = array();
+            }
+
             /* See if stored resource pattern contains any arguments */
             $recordAttributes = self::$controllerStorage->getRecordAttributes($recordId);
             if ($recordAttributes['resourcePattern'] !== NULL) {
@@ -119,15 +122,10 @@ class Route
 
                     $matchedArgumentsKeys = array_keys($matchedArguments);
 
-                    /* Merge parsed arguments into controller arguments */
-                    if (!isset($matches[$recordId][2])) {
-                        $matches[$recordId][2] = array();
-                    }
-
+                    /* Replace parsed arguments into controller arguments */
                     foreach ($matches[$recordId][2] as &$argumentValue) {
                         $argumentValue = str_replace($matchedArgumentsKeys, $matchedArguments, $argumentValue);
                     }
-
 
                     /* Merge parsed arguments into controller class and method */
                     $matches[$recordId][0] = str_replace($matchedArgumentsKeys, $matchedArguments, $matches[$recordId][0]);

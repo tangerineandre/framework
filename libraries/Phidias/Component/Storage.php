@@ -45,7 +45,7 @@ class Storage
 {
 	private $root;
 
-	public function __construct($root = NULL)
+	public function __construct($root)
 	{
 		if ($root === NULL) {
 			$root = "/";
@@ -130,6 +130,11 @@ class Storage
 	public function getUrl($filename)
 	{
 		return NULL;
+	}
+
+	public function destroy()
+	{
+		return Filesystem::deleteDirectory($this->root);
 	}
 
 }

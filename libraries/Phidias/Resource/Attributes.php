@@ -28,4 +28,10 @@ class Attributes
 
         return $this->data[$name];
     }
+
+
+    public function collectionHelper($collection)
+    {
+        return new Attributes\CollectionHelper($this, $collection);
+    }
 }

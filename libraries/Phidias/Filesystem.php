@@ -76,18 +76,21 @@ class Filesystem
         return self::isFile($file) ? unlink($file) : FALSE;
     }
 
-    public static function rmdir($dir)
+    public static function deleteDirectory($dir)
     {
-        foreach(glob($dir . '/*') as $file) {
+        $handle = opendir($dir);
 
-            if ( is_dir($file) ) {
-                self::rmdir($file);
-            } else {
-                unlink($file);
+        while(false !== ($file = readdir($handle))) {
+            if (($file != '.') && ($file != '..')) {
+                if (is_dir($dir.'/'.$file)) {
+                    self::deleteDirectory($dir.'/'.$file);
+                } else {
+                    self::delete($dir.'/'.$file);
+                }
             }
-
-            rmdir($dir);
         }
+        closedir($handle);
+        rmdir($dir);
     }
 
     public static function copyDirectory($src, $dst)
@@ -117,6 +120,11 @@ class Filesystem
     public static function mktree($dir, $perms = 0777)
     {
         return $this->createDirectory($dir, $perms);
+    }
+
+    public static function rmdir($dir)
+    {
+        return $this->deleteDirectory($dir);
     }
 
     public static function putContents($filename, $data, $flags = 0)

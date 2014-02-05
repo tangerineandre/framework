@@ -235,7 +235,7 @@ class Collection
 
     public function getPage()
     {
-        return $this->page;
+        return $this->page === null ? 1 : $this->page;
     }
 
 
@@ -318,6 +318,8 @@ class Collection
 
     private function matchObject($object)
     {
+        $validAttributes = $this->map->getAttributes();
+
         $localFilter = new \stdClass;
 
         foreach ($object as $attributeName => $value) {
@@ -326,7 +328,7 @@ class Collection
                 $this->joins[$attributeName]['collection']->matchObject($value);
             } else {
 
-                if ($value === NULL || (is_scalar($value) && trim($value) === '')) {
+                if (!isset($validAttributes[$attributeName])) {
                     continue;
                 }
 
@@ -677,7 +679,7 @@ class Collection
                     $values[$columnName] = $exceptionData['key'] == 'PRIMARY' ? $exceptionData['entry'] : NULL;
                 }
 
-            } else if (isset($entity->$attributeName)) {
+            } else if (property_exists($entity, $attributeName)) {
                 $values[$columnName] = $entity->$attributeName;
             }
         }

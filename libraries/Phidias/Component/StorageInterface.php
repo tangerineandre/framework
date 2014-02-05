@@ -3,7 +3,7 @@ namespace Phidias\Component;
 
 interface StorageInterface
 {
-    public function __construct($root = NULL);
+    public function __construct($root);
     public function getList($source = "/");
     public function isFile($filename);
 	public function isDirectory($directory);
@@ -14,4 +14,5 @@ interface StorageInterface
     public function delete($filename);
     public function upload($localFile, $destination);
     public function getUrl($filename);
+    public function destroy();
 }
