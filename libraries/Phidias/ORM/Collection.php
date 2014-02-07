@@ -794,6 +794,7 @@ class Collection
 
         if ($this->where) {
             $aliasMap           = $this->buildAliasMap();
+
             $updateConditions   = array();
             foreach($this->where as $where) {
                 $updateConditions[] = $this->translate($where, $aliasMap);
@@ -803,7 +804,24 @@ class Collection
             $updateCondition = NULL;
         }
 
-        return $this->db->update($this->map->getTable().' `'.$this->alias.'`', $this->updateValues, $updateCondition);
+
+        $table = $this->map->getTable().' `'.$this->alias.'`';
+
+        foreach ($this->joins as $name => $join) {
+
+            $joinConditions = array("`$this->alias`.`{$join['localColumn']}` = `$this->alias.$name`.`{$join['foreignColumn']}`");
+            foreach ($join['collection']->where as $condition) {
+                $joinConditions[] = $this->translate($condition, $aliasMap);
+            }
+
+            $joinTable = $join['collection']->map->getTable();
+            $joinAlias = $join['collection']->alias;
+
+            $table .= " JOIN $joinTable `$joinAlias` ON ".implode(" AND ", $joinConditions);
+
+        }
+
+        return $this->db->update($table, $this->updateValues, $updateCondition);
     }
 
     public function delete($entity = NULL)
