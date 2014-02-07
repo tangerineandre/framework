@@ -204,6 +204,10 @@ class Select
             $sqlQuery .= "GROUP BY ".implode(', ', $this->groupBy)." \n";
         }
 
+        if ($this->having !== NULL && !$count) {
+            $sqlQuery .= "HAVING $this->having"." \n";
+        }
+
         if ($this->orderBy && !$count) {
             $orderBy = array();
             foreach ($this->orderBy as $fieldName) {
@@ -212,10 +216,6 @@ class Select
 
             $sqlQuery .= "ORDER BY ".implode(', ', $orderBy)." \n";
         }
-
-        if ($this->having !== NULL && !$count) {
-            $sqlQuery .= "HAVING $this->having"." \n";
-        }        
         
         if ($this->limit !== NULL && !$count) {
             $sqlQuery .= "LIMIT $this->limit"." \n";

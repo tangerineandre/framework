@@ -14,6 +14,7 @@ class Collection
     private $where;
     private $orderBy;
     private $groupBy;
+    private $having;
 
     /* Paging data */
     private $limit;
@@ -47,8 +48,9 @@ class Collection
 
         $this->useIndex         = array();
         $this->where            = array();
-        $this->groupBy          = array();
         $this->orderBy          = array();
+        $this->groupBy          = array();
+        $this->having           = array();
         $this->limit            = NULL;
 
         $this->postFilters      = array();
@@ -219,6 +221,13 @@ class Collection
     public function limit($limit)
     {
         $this->limit = $limit !== null ? max(1, (int)$limit) : null;
+
+        return $this;
+    }
+
+    public function having($condition, $parameters = NULL)
+    {
+        $this->having[] = $parameters ? $this->db->bindParameters($condition, $parameters) : $condition;
 
         return $this;
     }
@@ -524,6 +533,10 @@ class Collection
 
         foreach ($this->orderBy as $order) {
             $select->orderBy($this->translate($order, $aliasMap));
+        }
+
+        foreach ($this->having as $condition) {
+            $select->having($this->translate($condition, $aliasMap));
         }
 
         foreach ($this->useIndex as $index) {
