@@ -120,7 +120,7 @@ class Iterator implements \Iterator
 
         /* Apply postfilters */
         foreach ($this->postFilters as $filter) {
-            $filter($returnObject);
+            call_user_func_array($filter, array($returnObject));
         }
 
         return $returnObject;

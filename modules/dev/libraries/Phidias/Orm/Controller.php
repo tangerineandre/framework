@@ -33,11 +33,11 @@ class Phidias_Orm_Controller extends Controller
 
             $checking[$classname] = true;
 
-            $object = new $classname;
-            if (!$object instanceof \Phidias\ORM\Entity) {
+            if (!is_subclass_of($classname, "\Phidias\ORM\Entity")) {
                 continue;
             }
 
+            $object = new $classname;
             $map    = $object->getMap();
             $db     = $map->getDB();
             if ($db !== NULL) {
@@ -79,6 +79,25 @@ class Phidias_Orm_Controller extends Controller
             $entity::table()->drop();
         }
     }
+
+
+    public function getRecreate()
+    {
+        $entities = self::getEntities($this->attributes->get('prefix'));
+
+        foreach (array_reverse($entities) as $entity) {
+            $entity::table()->drop();
+        }
+
+        foreach ($entities as $entity) {
+            $entity::table()->create();
+        }
+
+        foreach ($entities as $entity) {
+            $entity::table()->createTriggers();
+        }
+    }
+
 
     public function triggers()
     {

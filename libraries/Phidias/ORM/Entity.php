@@ -128,16 +128,44 @@ class Entity
         return new Iterator(get_called_class(), $key, $singleElement);
     }
 
-    public static function collection()
+    public static function collection($alias = NULL)
     {
         $className = get_called_class();
-        return new Collection(new $className);
+        $retval    = new Collection(new $className);
+
+        if ($alias !== NULL) {
+            $retval->setAlias($alias);
+        }
+
+        if (is_callable(array($className, 'preFilter'))) {
+            $retval->addPreFilter(array($className, 'preFilter'));
+        }
+
+        if (is_callable(array($className, 'postFilter'))) {
+            $retval->addPostFilter(array($className, 'postFilter'));
+        }
+
+        return $retval;
     }
 
-    public static function single()
+    public static function single($alias = NULL)
     {
         $className = get_called_class();
-        return new Collection(new $className, TRUE);
+        $retval    = new Collection(new $className, TRUE);
+
+        if ($alias !== NULL) {
+            $retval->setAlias($alias);
+        }
+
+        if (is_callable(array($className, 'preFilter'))) {
+            $retval->addPreFilter(array($className, 'preFilter'));
+        }
+
+        if (is_callable(array($className, 'postFilter'))) {
+            $retval->addPostFilter(array($className, 'postFilter'));
+        }
+
+        return $retval;
     }
 
     public static function table()

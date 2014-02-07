@@ -15,6 +15,10 @@ class CollectionHelper
 	/* Establish collection order from incoming attributes */
 	public function search($searchFields)
 	{
+        if (!is_array($searchFields)) {
+            $searchFields = func_get_args();
+        }
+
         $query = $this->attributes->get('query');
         if (trim($query)) {
             $this->collection->search($query, $searchFields);
@@ -24,11 +28,11 @@ class CollectionHelper
 	}
 
 	/* Establish collection order from incoming attributes */
-	public function sort()
+	public function sort($defaultSortColumn = NULL, $defaultDescending = false)
 	{
-        $orderAttribute = $this->attributes->get('order');
+        $orderAttribute = $this->attributes->get('order', $defaultSortColumn);
         if ($orderAttribute !== null) {
-            $this->collection->orderBy($orderAttribute, $this->attributes->get('descending', false));
+            $this->collection->orderBy($orderAttribute, $this->attributes->get('descending', $defaultDescending));
         }
 
         return $this;

@@ -37,7 +37,7 @@ class Collection
 
     public function __construct($entity, $hasOneElement = FALSE)
     {
-        $this->alias            = get_class($entity);
+        $this->alias            = $this->generateAlias($entity);
 
         $this->entity           = $entity;
         $this->hasOneElement    = $hasOneElement;
@@ -65,6 +65,22 @@ class Collection
         $this->joinAsInner      = FALSE;
         $this->relationAlias    = NULL;
     }
+
+
+    private function generateAlias($entity)
+    {
+        $class = get_class($entity);
+        $parts = explode("\\", $class);
+
+        $count = count($parts);
+
+        if ($count >=2 && $parts[$count-1] === 'Entity') {
+            return $parts[$count-2];
+        }
+
+        return $class;
+    }
+
 
     public function setAlias($alias, $recursively = FALSE)
     {
@@ -114,6 +130,13 @@ class Collection
 
     public function attr($name, $origin = NULL)
     {
+        if ($origin === NULL) {
+            $validAttributes = $this->map->getAttributes();
+            if (!isset($validAttributes[$name])) {
+                return $this;
+            }
+        }
+
         if ($origin instanceof Collection) {
             $this->nest($name, $origin->joinAsInner ? 'inner' : 'left', $origin, $origin->relationAlias);
         } else {
@@ -174,7 +197,9 @@ class Collection
 
     public function orderBy($attribute, $descending = FALSE)
     {
-        if (in_array($attribute, array_keys($this->attributes))) {
+        $validAttributes = $this->map->getAttributes();
+
+        if (isset($validAttributes[$attribute])) {
             $sortString = $descending ? 'DESC' : 'ASC';
             $this->order("$this->alias.$attribute $sortString");
         } else {
@@ -318,11 +343,19 @@ class Collection
 
     private function matchObject($object)
     {
+        //Deep clone
+        $matchableObject = clone($object);
+
+        /* Apply pre-filters */
+        foreach ($this->preFilters as $filter) {
+            call_user_func_array($filter, array($matchableObject));
+        }        
+
         $validAttributes = $this->map->getAttributes();
 
         $localFilter = new \stdClass;
 
-        foreach ($object as $attributeName => $value) {
+        foreach ($matchableObject as $attributeName => $value) {
 
             if (isset($this->joins[$attributeName]) && is_object($value) && !($value instanceof Entity && $value->getPrimaryKeyValue()) ) {
                 $this->joins[$attributeName]['collection']->matchObject($value);
@@ -664,7 +697,7 @@ class Collection
 
         /* Apply pre-filters */
         foreach ($this->preFilters as $filter) {
-            $filter($entity);
+            call_user_func_array($filter, array($entity));
         }
 
         $values = array();

@@ -287,8 +287,30 @@ class Environment
         $files = Filesystem::listDirectory($folder);
 
         foreach ($files as $file) {
+
             if (is_file($folder.'/'.$file) && basename($file) == $classname.'.php') {
-                $retval[] = str_replace(array('/', '.php'), array('_', ''), str_replace($trail, '', $folder.'/'.$file));
+
+                /* get the declared class */
+                $contents = file_get_contents($folder.'/'.$file);
+
+                $matches = array();
+                preg_match("/class ([a-zA-Z0-9_]+)/", $contents, $matches);
+                if (!isset($matches[1])) {
+                    continue;
+                }
+
+                $foundClassname = $matches[1];
+
+                /* determine the namespace */
+                $matches = array();
+                preg_match("/namespace ([a-zA-Z0-9_\\\\]+)/", $contents, $matches);
+
+                if (isset($matches[1])) {
+                    $foundClassname = $matches[1].'\\'.$foundClassname;
+                }
+
+                $retval[] = $foundClassname;
+
             } else if (is_dir($folder.'/'.$file)) {
                 self::findClassesInFolder($classname, $folder.'/'.$file, $retval, $trail);
             }
