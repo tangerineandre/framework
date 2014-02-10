@@ -191,6 +191,8 @@ class DB
             return "'".$this->escapeString($value)."'";
         } else if (is_null($value)) {
             return 'NULL';
+        } else if (is_bool($value)) {
+            return $value ? 1 : 0;
         } else if (is_array($value)) {
 
             $sanitizedValues = array();
@@ -348,6 +350,8 @@ class DB
             $sanitizedValue = $this->sanitizeValue($value);
             if ($sanitizedValue !== NULL) {
                 $valuesArray[] = "`$columnName` = $sanitizedValue";
+            } else {
+                trigger_error("could not sanitize value for column '$columnName'", E_USER_WARNING);
             }
         }
 

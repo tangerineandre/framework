@@ -15,4 +15,5 @@ interface StorageInterface
     public function upload($localFile, $destination);
     public function getUrl($filename);
     public function destroy();
+    public function isEmpty($source = "/");
 }

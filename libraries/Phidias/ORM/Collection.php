@@ -742,6 +742,7 @@ class Collection
                 $idConditions[]             = "$columnName = :$attributeName";
                 $idValues[$attributeName]   = isset($entityID[$index]) ? $entityID[$index] : NULL;
             }
+
             $this->db->update($this->map->getTable(), $values, implode(' AND ', $idConditions), $idValues);
 
         } else {

@@ -41,7 +41,7 @@ namespace Phidias\Component;
 use Phidias\Filesystem;
 use Phidias\Component\Configuration;
 
-class Storage
+class Storage implements StorageInterface
 {
 	private $root;
 
@@ -135,6 +135,12 @@ class Storage
 	public function destroy()
 	{
 		return Filesystem::deleteDirectory($this->root);
+	}
+
+
+	public function isEmpty($source = "/")
+	{
+		return count($this->getList($source)) === 0;
 	}
 
 }

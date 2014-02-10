@@ -167,8 +167,6 @@ class Select
         $this->flatten();
 
         if ($count) {
-
-
             if ($this->groupBy) {
                 $countField = "DISTINCT({$this->groupBy[0]})";
             } else {
@@ -204,7 +202,7 @@ class Select
             $sqlQuery .= "GROUP BY ".implode(', ', $this->groupBy)." \n";
         }
 
-        if ($this->having !== NULL && !$count) {
+        if ($this->having !== NULL) {
             $sqlQuery .= "HAVING $this->having"." \n";
         }
 

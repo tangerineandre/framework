@@ -78,8 +78,11 @@ class Filesystem
 
     public static function deleteDirectory($dir)
     {
-        $handle = opendir($dir);
+        if (!is_dir($dir)) {
+            return;
+        }
 
+        $handle = opendir($dir);
         while(false !== ($file = readdir($handle))) {
             if (($file != '.') && ($file != '..')) {
                 if (is_dir($dir.'/'.$file)) {
@@ -90,7 +93,8 @@ class Filesystem
             }
         }
         closedir($handle);
-        rmdir($dir);
+
+        return rmdir($dir);
     }
 
     public static function copyDirectory($src, $dst)

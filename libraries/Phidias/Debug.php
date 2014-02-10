@@ -110,6 +110,11 @@ class Debug
 
     }
 
+    public static function getMessages()
+    {
+        return self::$messages;
+    }
+
     public static function dump($var, $returnOutput = FALSE)
     {
         $varData = print_r($var, TRUE);
