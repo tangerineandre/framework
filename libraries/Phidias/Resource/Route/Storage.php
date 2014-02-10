@@ -132,11 +132,14 @@ class Storage
 
 			$queryAttributeValue = $queryAttributes[$attributeName];
 			$matchingFunction	 = isset($this->compareFunctions[$attributeName]) ? $this->compareFunctions[$attributeName] : NULL;
-			if (!$this->valuesMatch($storedAttributeValue, $queryAttributeValue, $matchingFunction)) {
+
+			$matchScore = $this->valuesMatch($storedAttributeValue, $queryAttributeValue, $matchingFunction);
+
+			if (!$matchScore) {
 				return 0;
 			}
 
-			$sumPriority += $this->attributes[$attributeName];
+			$sumPriority += $matchScore * $this->attributes[$attributeName];
 		}
 
 		return $sumPriority;

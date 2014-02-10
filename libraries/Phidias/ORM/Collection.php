@@ -721,7 +721,7 @@ class Collection
                 try {
                     $values[$columnName] = isset($entity->$attributeName) ? $this->joins[$attributeName]['collection']->save($entity->$attributeName) : NULL;
                 } catch (\Phidias\DB\Exception\DuplicateKey $e) {
-                    $exceptionData = $e->getData();
+                    $exceptionData       = $e->getData();
                     $values[$columnName] = $exceptionData['key'] == 'PRIMARY' ? $exceptionData['entry'] : NULL;
                 }
 

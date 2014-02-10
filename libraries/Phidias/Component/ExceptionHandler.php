@@ -12,6 +12,8 @@ class ExceptionHandler implements ExceptionHandlerInterface
         Debug::collapseAll();
         Debug::add($exception->getMessage(), 'error');
 
+        HTTP\Response::code($exception->getCode(), $exception->getMessage());
+
         $output = NULL;
 
         $exceptionTemplate = str_replace(array('_','\\'), '/', strtolower( str_replace('_Exception', '', get_class($exception)) ));

@@ -112,26 +112,30 @@ class Route
                 $matches[$recordId][2] = array();
             }
 
+
+            $wildcardValues = array(
+                '$method' => $requestMethod
+            );
+
             /* See if stored resource pattern contains any arguments */
             $recordAttributes = self::$controllerStorage->getRecordAttributes($recordId);
             if ($recordAttributes['resourcePattern'] !== NULL) {
-                
+
                 $matchedArguments = self::getMatchingArguments($recordAttributes['resourcePattern'], $requestResource);
 
                 if ($matchedArguments !== NULL) {
-
-                    $matchedArgumentsKeys = array_keys($matchedArguments);
-
-                    /* Replace parsed arguments into controller arguments */
-                    foreach ($matches[$recordId][2] as &$argumentValue) {
-                        $argumentValue = str_replace($matchedArgumentsKeys, $matchedArguments, $argumentValue);
-                    }
-
-                    /* Merge parsed arguments into controller class and method */
-                    $matches[$recordId][0] = str_replace($matchedArgumentsKeys, $matchedArguments, $matches[$recordId][0]);
-                    $matches[$recordId][1] = str_replace($matchedArgumentsKeys, $matchedArguments, $matches[$recordId][1]);
+                    $wildcardValues = array_merge($wildcardValues, $matchedArguments);
                 }
+            }
 
+            /* Replace wildcard values in controller class, method and arguments */
+            $wildcardKeys = array_keys($wildcardValues);
+
+            $matches[$recordId][0] = str_replace($wildcardKeys, $wildcardValues, $matches[$recordId][0]);
+            $matches[$recordId][1] = str_replace($wildcardKeys, $wildcardValues, $matches[$recordId][1]);
+
+            foreach ($matches[$recordId][2] as &$argumentValue) {
+                $argumentValue = str_replace($wildcardKeys, $wildcardValues, $argumentValue);
             }
 
             Debug::add("possible controller '$controlerString'");
@@ -197,6 +201,8 @@ class Route
 
 
     /* Must indicate if a string conforms to a pattern:
+    and return a scored value.  i.e.  string "foo/bar" matches both patterns "foo/:something" and "foo/bar"
+    but "foo/bar" is a stronger match.
 
     pattern                     string                  isMatch
     foo                         foo                     1
@@ -210,32 +216,36 @@ class Route
     */
     public static function matchesPattern($pattern, $string)
     {
+        $matchScore   = 0;
+        
         $patternParts = explode('/', $pattern);
         $queryParts   = explode('/', $string);
 
         foreach ($queryParts as $key => $queryPart) {
 
             if (!isset($patternParts[$key])) {
-                return FALSE;
+                return 0;
             }
 
             $patternPart = $patternParts[$key];
 
             if (substr($patternPart, 0, 1) === '*') {
-                return TRUE;
+                return 1;
             }
 
             if (substr($patternPart, 0, 1) === ':') {
+                $matchScore++;
                 continue;
             }
 
             if ($queryPart !== $patternPart) {
-                return FALSE;
+                return 0;
             }
 
+            $matchScore += 2;
         }
 
-        return count($patternParts) == count($queryParts);
+        return count($patternParts) == count($queryParts) ? $matchScore : 0;
     }
 
     //i.e.  matchesMethod('get|PosT|PUT', 'GET') --> true

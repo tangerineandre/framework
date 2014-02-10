@@ -1,8 +1,6 @@
 <?php
 namespace Phidias;
 
-use Phidias\HTTP\Response;
-
 class Exception extends \Exception
 {
 	protected $code = 400;
@@ -11,9 +9,7 @@ class Exception extends \Exception
     public function __construct($data = NULL, $message = NULL, $previous = NULL)
     {
         parent::__construct($message, $this->code, $previous);
-
         $this->data = $data;
-        Response::code($this->code, $message);
     }
 
     public function getData()

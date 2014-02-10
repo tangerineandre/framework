@@ -99,7 +99,7 @@ class Phidias_Orm_Controller extends Controller
     }
 
 
-    public function triggers()
+    public function getTriggers()
     {
         $entities = self::getEntities($this->attributes->get('prefix'));
 
@@ -108,7 +108,7 @@ class Phidias_Orm_Controller extends Controller
         }
     }
 
-    public function truncate()
+    public function getTruncate()
     {
         $entities = self::getEntities($this->attributes->get('prefix'));
 
@@ -117,7 +117,7 @@ class Phidias_Orm_Controller extends Controller
         }
     }
 
-    public function optimize()
+    public function getOptimize()
     {
         $entities = self::getEntities($this->attributes->get('prefix'));
 
