@@ -57,6 +57,10 @@ class Table
             $this->table->addIndex($name, $columns);
         }
 
+        foreach ($this->map->getUniques() as $columns) {
+            $this->table->addUnique($columns);
+        }
+
         unset(self::$lock[$this->map->getTable()]);
     }
 

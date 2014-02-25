@@ -6,6 +6,7 @@ use \Phidias\Component\Language;
 use \Phidias\Component\View;
 use \Phidias\Component\Authorization;
 
+
 class Application
 {
     private static $requestStack = array();
@@ -32,6 +33,15 @@ class Application
     */
     public static function run($requestMethod, $requestResource = NULL, $attributes = NULL)
     {
+        /* Handle CORS preflight requests */
+        if ($requestMethod == 'options') {
+            HTTP\Response::header("Access-Control-Allow-Origin", "*");
+            HTTP\Response::header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+
+            return;
+        }
+
+
         /* Increase depth */
         self::$depth++;
 
@@ -45,9 +55,6 @@ class Application
             $requestResource = Configuration::get('phidias.application.defaults.resource');
         }
         $requestResource = rtrim($requestResource, '/');
-
-        //Sanitize Request method
-        $requestMethod = HTTP\Request::sanitizeMethod($requestMethod);
 
         //Sanitize attributes
         if (!is_array($attributes)) {

@@ -467,6 +467,12 @@ class DB
         foreach ($indexes as $name => $columns) {
             $this->query("ALTER TABLE `$tableName` ADD INDEX `$name` (`".implode("`, `", $columns)."`);");
         }
+
+        $uniques = $table->getUniques();
+        foreach ($uniques as $columns) {
+            $columns = (array)$columns;
+            $this->query("ALTER TABLE `$tableName` ADD UNIQUE (`".implode("`, `", $columns)."`);");
+        }
     }
 
 }

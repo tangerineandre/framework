@@ -16,6 +16,7 @@ class Table
     private $primaryKeys;
     private $foreignKeys;
     private $indexes;
+    private $uniques;
 
     public function __construct($name)
     {
@@ -24,6 +25,7 @@ class Table
         $this->primaryKeys  = array();
         $this->foreignKeys  = array();
         $this->indexes      = array();
+        $this->uniques      = array();
     }
 
     public function getName()
@@ -54,6 +56,11 @@ class Table
     public function getIndexes()
     {
         return $this->indexes;
+    }
+
+    public function getUniques()
+    {
+        return $this->uniques;
     }
 
 
@@ -127,6 +134,11 @@ class Table
     public function addIndex($name, $columns)
     {
         $this->indexes[$name] = (array)$columns;
+    }
+
+    public function addUnique($columns)
+    {
+        $this->uniques[] = $columns;
     }
 
 }

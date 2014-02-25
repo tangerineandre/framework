@@ -19,6 +19,7 @@ class Map
     private $relations;
     private $triggers;
     private $indexes;
+    private $uniques;
 
     public function __construct(array $mapData = NULL)
     {
@@ -29,6 +30,7 @@ class Map
         $this->relations    = array();
         $this->triggers     = array();
         $this->indexes      = array();
+        $this->uniques      = array();
 
         if ($mapData !== NULL) {
             $this->fromArray($mapData);
@@ -114,6 +116,11 @@ class Map
         return $this->indexes;
     }
 
+    public function getUniques()
+    {
+        return $this->uniques;
+    }
+
 
     private function fromArray($array)
     {
@@ -165,6 +172,10 @@ class Map
 
         if (isset($array['indexes'])) {
             $this->indexes = $array['indexes'];
+        }
+
+        if (isset($array['unique'])) {
+            $this->uniques = $array['unique'];
         }
 
         if (isset($array['db'])) {
