@@ -10,6 +10,8 @@ class Entity
     /* Primary key values as stored in the database.  If this value is NULL, the object is assumed to not be stored yet */
     private $_id;
 
+    private $workingAttributes;
+
     public function __construct($_id = NULL, $autoFetch = TRUE)
     {
         if ($_id !== NULL) {
@@ -21,6 +23,27 @@ class Entity
                 $this->setValues((array)$probe);
             }
         }
+    }
+
+    public function useAttributes($attributeNames = NULL)
+    {
+        if ($this->workingAttributes === NULL) {
+            $this->workingAttributes = array();
+        }
+
+        $mapAttributes = $this->getMap()->getAttributes();
+
+        if (!is_array($attributeNames)) {
+            $attributeNames = func_get_args();
+        }
+
+        foreach ($attributeNames as $attributeName) {
+            if (isset($mapAttributes[$attributeName])) {
+                $this->workingAttributes[$attributeName] = $attributeName;
+            }
+        }
+
+        return $this;
     }
 
     public function getID()
@@ -234,9 +257,15 @@ class Entity
     /* Shorthand methods */
     private function getCollection()
     {
-        $map = self::getMap();
-        $collection = self::single()->allAttributes();
+        $collection = self::single();
 
+        if ($this->workingAttributes !== NULL) {
+            foreach ($this->workingAttributes as $attributeName) {
+                $collection->attr($attributeName);
+            }
+        }
+
+        $map = self::getMap();
         foreach (array_keys($map->getRelations()) as $attributeName) {
             if (isset($this->$attributeName) && $this->$attributeName instanceof Entity) {
                 $collection->attr($attributeName, $this->$attributeName->getCollection());

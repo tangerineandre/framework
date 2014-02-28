@@ -1,14 +1,36 @@
 <?php
 namespace Phidias\Component;
 
-class Authentication extends Persistent
+class Authentication extends Persistent implements AuthenticationInterface
 {
-    public function login()
+    protected $credentials = array();
+
+    public static function setCredential($credentialName, $value)
     {
+        $persistentObject = self::singleton();
+
+        $persistentObject->credentials[$credentialName] = $value;
     }
 
-    public function logout()
+    public static function getCredential($credentialName)
     {
-    	$this->clear();
+        $persistentObject = self::singleton();
+
+        return isset($persistentObject->$credentials[$credentialName]) ? $persistentObject->$credentials[$credentialName] : NULL;
+    }
+
+    public static function getCredentials()
+    {
+        $persistentObject = self::singleton();
+
+        return $persistentObject->credentials;
+    }
+
+    public static function clear()
+    {
+        $persistentObject = self::singleton();
+        $persistentObject->credentials = array();
+
+    	$persistentObject->forget();
     }
 }

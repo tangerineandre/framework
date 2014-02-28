@@ -98,9 +98,8 @@ class Resource
         Language::useContext($languagePreviousContext);
         Debug::endBlock();
 
-
         /* Produced output instead of model */
-        if ($stdOut !== NULL && $model === NULL) {
+        if (!empty($stdOut) && $model === NULL) {
             return $stdOut;
         }
 

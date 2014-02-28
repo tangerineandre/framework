@@ -23,6 +23,7 @@ class Persistent
     public function __construct()
     {
         if ($values = Session::get('persistent_component:'.get_called_class())) {
+
             foreach ($values as $attributeName => $value) {
                 $this->$attributeName = $value;
             }
@@ -45,7 +46,7 @@ class Persistent
         Session::set('persistent_component:'.$class, $values);
     }
 
-    public function clear()
+    public function forget()
     {
          Session::clear('persistent_component:'.get_called_class());
          $this->preventPersistence = true;

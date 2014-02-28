@@ -61,7 +61,7 @@ class Application
             $attributes = array();
         }
 
-        /* Authorize resource */
+        /* Authorize request */
         Debug::startBlock("authorizing '$requestResource'");
         if (!Authorization::authorized($requestMethod, $requestResource)) {
             throw new Application\Exception\Unauthorized(array('resource' => $requestResource, 'method' => $requestMethod));

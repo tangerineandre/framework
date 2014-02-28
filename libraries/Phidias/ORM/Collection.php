@@ -8,7 +8,7 @@ class Collection
     private $entity;
     private $hasOneElement;
 
-    private $attributes;
+    private $workingAttributes;
     private $joins;
 
     private $where;
@@ -38,34 +38,34 @@ class Collection
 
     public function __construct($entity, $hasOneElement = FALSE)
     {
-        $this->alias            = $this->generateAlias($entity);
+        $this->alias             = $this->generateAlias($entity);
+        
+        $this->entity            = $entity;
+        $this->hasOneElement     = $hasOneElement;
 
-        $this->entity           = $entity;
-        $this->hasOneElement    = $hasOneElement;
+        $this->workingAttributes = array();
+        $this->joins             = array();
 
-        $this->attributes       = array();
-        $this->joins            = array();
-
-        $this->useIndex         = array();
-        $this->where            = array();
-        $this->orderBy          = array();
-        $this->groupBy          = array();
-        $this->having           = array();
-        $this->limit            = NULL;
-
-        $this->postFilters      = array();
-        $this->preFilters       = array();
-
-        $this->map              = $this->entity->getMap();
-        $this->db               = \Phidias\DB::connect($this->map->getDB());
-
-        $this->iterator         = NULL;
-
-        $this->unitOfWork       = NULL;
-        $this->updateValues     = array();
-
-        $this->joinAsInner      = FALSE;
-        $this->relationAlias    = NULL;
+        $this->useIndex          = array();
+        $this->where             = array();
+        $this->orderBy           = array();
+        $this->groupBy           = array();
+        $this->having            = array();
+        $this->limit             = NULL;
+        
+        $this->postFilters       = array();
+        $this->preFilters        = array();
+        
+        $this->map               = $this->entity->getMap();
+        $this->db                = \Phidias\DB::connect($this->map->getDB());
+        
+        $this->iterator          = NULL;
+        
+        $this->unitOfWork        = NULL;
+        $this->updateValues      = array();
+        
+        $this->joinAsInner       = FALSE;
+        $this->relationAlias     = NULL;
     }
 
 
@@ -142,7 +142,7 @@ class Collection
         if ($origin instanceof Collection) {
             $this->nest($name, $origin->joinAsInner ? 'inner' : 'left', $origin, $origin->relationAlias);
         } else {
-            $this->attributes[$name] = $origin;
+            $this->workingAttributes[$name] = $origin;
         }
 
         return $this;
@@ -168,7 +168,7 @@ class Collection
 
     public function getAttributes()
     {
-        return array_keys($this->attributes);
+        return array_keys($this->workingAttributes);
     }
 
     public function whereKey($keyValue)
@@ -489,7 +489,7 @@ class Collection
 
 
         /* Derived attributes */
-        foreach ($this->attributes as $attributeName => $attributeSource) {
+        foreach ($this->workingAttributes as $attributeName => $attributeSource) {
             if (!isset($mapAttributes[$attributeName]) && $attributeSource != "NULL") {
                 $retval["$this->alias.$attributeName"] = '('.$this->translate($attributeSource, $retval).')';
             }
@@ -516,7 +516,7 @@ class Collection
             $select->field($this->alias.'.'.$keyAttributeName, $this->translate($this->alias.'.'.$keyAttributeName, $aliasMap));
         }
 
-        foreach ($this->attributes as $name => $origin) {
+        foreach ($this->workingAttributes as $name => $origin) {
             if ($origin == NULL) {
                 $origin = $this->alias.'.'.$name;
             }
@@ -577,7 +577,7 @@ class Collection
 
         $iterator = new \Phidias\DB\Iterator(get_class($this->entity), $key, $this->hasOneElement);
 
-        foreach (array_keys($this->attributes) as $attributeName) {
+        foreach (array_keys($this->workingAttributes) as $attributeName) {
             $iterator->attr($attributeName, "$this->alias.$attributeName");
         }
 
@@ -687,7 +687,7 @@ class Collection
     public function add($entity)
     {
         if ($this->unitOfWork === NULL) {
-            $this->unitOfWork = new Collection\UnitOfWork($this->attributes, $this->joins, $this->map, $this->db, $this->preFilters);
+            $this->unitOfWork = new Collection\UnitOfWork($this->workingAttributes, $this->joins, $this->map, $this->db, $this->preFilters);
         }
 
         $this->unitOfWork->add($entity);
@@ -713,20 +713,26 @@ class Collection
             call_user_func_array($filter, array($entity));
         }
 
-        $values = array();
-        foreach (array_keys($this->attributes) as $attributeName) {
+
+        $mapAttributes = $this->map->getAttributes();
+        
+        $targetValues  = array();
+
+        foreach (array_keys($this->workingAttributes) as $attributeName) {
+
             $columnName = $this->map->getColumn($attributeName);
+
             if (isset($this->joins[$attributeName])) {
 
                 try {
-                    $values[$columnName] = isset($entity->$attributeName) ? $this->joins[$attributeName]['collection']->save($entity->$attributeName) : NULL;
+                    $targetValues[$columnName] = isset($entity->$attributeName) ? $this->joins[$attributeName]['collection']->save($entity->$attributeName) : NULL;
                 } catch (\Phidias\DB\Exception\DuplicateKey $e) {
-                    $exceptionData       = $e->getData();
-                    $values[$columnName] = $exceptionData['key'] == 'PRIMARY' ? $exceptionData['entry'] : NULL;
+                    $exceptionData             = $e->getData();
+                    $targetValues[$columnName] = $exceptionData['key'] == 'PRIMARY' ? $exceptionData['entry'] : NULL;
                 }
 
-            } else if (property_exists($entity, $attributeName)) {
-                $values[$columnName] = $entity->$attributeName;
+            } else if (isset($mapAttributes[$attributeName]) && property_exists($entity, $attributeName)) {
+                $targetValues[$columnName] = $entity->$attributeName;
             }
         }
 
@@ -743,10 +749,10 @@ class Collection
                 $idValues[$attributeName]   = isset($entityID[$index]) ? $entityID[$index] : NULL;
             }
 
-            $this->db->update($this->map->getTable(), $values, implode(' AND ', $idConditions), $idValues);
+            $this->db->update($this->map->getTable(), $targetValues, implode(' AND ', $idConditions), $idValues);
 
         } else {
-            $this->db->insert($this->map->getTable(), $values);
+            $this->db->insert($this->map->getTable(), $targetValues);
         }
 
         $newID = array();
