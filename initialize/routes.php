@@ -10,6 +10,8 @@ Route::forRequest("GET foo/bar/:var1/:var2/*rest")
     ->useController(array("Controller_:var1", ":var2", array("foo", ":var2", "bar", "*rest")));
 */
 
+Route::forRequest('* default')->useController(array('\Phidias\Application\Main\Controller', 'get'));
+
 
 
 /*
@@ -19,7 +21,7 @@ Given a request:  GET foo/bar/shoo
 */ 
 
 
-/* d) Foo_Controller::getBar('shoo') */
+/* d) Foo\Controller::getBar('shoo') */
 Route::forRequest('*')->useController(function($requestMethod, $requestResource) {
 
     $parts     = explode('/', $requestResource);
@@ -30,7 +32,7 @@ Route::forRequest('*')->useController(function($requestMethod, $requestResource)
 
     $argument = array_pop($parts);
     $method   = $requestMethod.ucfirst(array_pop($parts));
-    $class    = implode('_', array_map('ucfirst', $parts)).'_Controller';
+    $class    = "\\" . implode('\\', array_map('ucfirst', $parts)).'\Controller';
 
     $arguments = array($argument);
 
@@ -38,7 +40,7 @@ Route::forRequest('*')->useController(function($requestMethod, $requestResource)
 });
 
 
-/* c) Foo_Bar_Controller::get('shoo') */
+/* c) Foo\Bar\Controller::get('shoo') */
 Route::forRequest('*')->useController(function($requestMethod, $requestResource) {
 
     $parts     = explode('/', $requestResource);
@@ -48,7 +50,7 @@ Route::forRequest('*')->useController(function($requestMethod, $requestResource)
     }
 
     $lastPart  = array_pop($parts);
-    $class     = implode('_', array_map('ucfirst', $parts)).'_Controller';
+    $class     = "\\" . implode('\\', array_map('ucfirst', $parts)).'\Controller';
     $method    = $requestMethod;
     $arguments = array($lastPart);
 
@@ -57,7 +59,7 @@ Route::forRequest('*')->useController(function($requestMethod, $requestResource)
 
 
 
-/* b) Foo_Bar_Controller::getShoo() */
+/* b) Foo\Bar\Controller::getShoo() */
 Route::forRequest('*')->useController(function($requestMethod, $requestResource) {
 
     $parts     = explode('/', $requestResource);
@@ -67,7 +69,7 @@ Route::forRequest('*')->useController(function($requestMethod, $requestResource)
     }
 
     $lastPart  = array_pop($parts);
-    $class     = implode('_', array_map('ucfirst', $parts)).'_Controller';
+    $class     = "\\" . implode('\\', array_map('ucfirst', $parts)).'\Controller';
     $method    = $requestMethod.ucfirst($lastPart);
     $arguments = array();
 
@@ -76,11 +78,11 @@ Route::forRequest('*')->useController(function($requestMethod, $requestResource)
 
 
 
-/* a) Foo_Bar_Shoo_Controller::get() */
+/* a) Foo\Bar\Shoo\Controller::get() */
 Route::forRequest('*')->useController(function($requestMethod, $requestResource) {
 
     $parts     = explode('/', $requestResource);
-    $class     = implode('_', array_map('ucfirst', $parts)).'_Controller';
+    $class     = "\\" . implode('\\', array_map('ucfirst', $parts)).'\Controller';
     $method    = $requestMethod;
     $arguments = array();
 
@@ -121,14 +123,14 @@ i.e.
 
 type                                        template
 ---------------------------------------------------
-Person_Foo_Controller->get()                person/foo/get
-Person_Foo_Controller->getShoo()            person/foo/getshoo
+Person\Foo\Controller->get()                person/foo/get
+Person\Foo\Controller->getShoo()            person/foo/getshoo
 
 
 */
 Route::forRequest('*')->useTemplate(function($requestMethod, $requestResource, $controller, $modelType) {
 
-    $baseParts = explode('_', strtolower(str_replace('_Controller', '', $controller[0])));
+    $baseParts = explode('\\', strtolower(str_replace('\Controller', '', $controller[0])));
     $template  = implode('/', $baseParts).'/'.strtolower($controller[1]);
 
     return $template;

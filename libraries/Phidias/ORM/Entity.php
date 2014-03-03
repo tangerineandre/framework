@@ -263,6 +263,8 @@ class Entity
             foreach ($this->workingAttributes as $attributeName) {
                 $collection->attr($attributeName);
             }
+        } else {
+            $collection->allAttributes();
         }
 
         $map = self::getMap();
