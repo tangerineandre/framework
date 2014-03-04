@@ -10,7 +10,7 @@ Route::forRequest("GET foo/bar/:var1/:var2/*rest")
     ->useController(array("Controller_:var1", ":var2", array("foo", ":var2", "bar", "*rest")));
 */
 
-Route::forRequest('* default')->useController(array('\Phidias\Application\Main\Controller', 'get'));
+Route::forRequest('* default')->useController(array('Phidias\Application\Main\Controller', 'get'));
 
 
 

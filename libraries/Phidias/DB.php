@@ -44,17 +44,17 @@ class DB
         }
 
         if ($identifier === NULL) {
-            $host       = Configuration::get("db.host");
-            $username   = Configuration::get("db.username");
-            $password   = Configuration::get("db.password");
-            $database   = Configuration::get("db.database");
-            $charset    = Configuration::get("db.charset");
+            $host       = Configuration::get("phidias.db.host");
+            $username   = Configuration::get("phidias.db.username");
+            $password   = Configuration::get("phidias.db.password");
+            $database   = Configuration::get("phidias.db.database");
+            $charset    = Configuration::get("phidias.db.charset");
         } else if (is_string($identifier)) {
-            $host       = Configuration::get("db.$identifier.host");
-            $username   = Configuration::get("db.$identifier.username");
-            $password   = Configuration::get("db.$identifier.password");
-            $database   = Configuration::get("db.$identifier.database");
-            $charset    = Configuration::get("db.$identifier.charset");
+            $host       = Configuration::get("phidias.db.$identifier.host");
+            $username   = Configuration::get("phidias.db.$identifier.username");
+            $password   = Configuration::get("phidias.db.$identifier.password");
+            $database   = Configuration::get("phidias.db.$identifier.database");
+            $charset    = Configuration::get("phidias.db.$identifier.charset");
         } else if (is_array($identifier)) {
             $host       = isset($identifier['host'])        ? $identifier['host']       : NULL;
             $username   = isset($identifier['username'])    ? $identifier['username']   : NULL;

@@ -1,4 +1,103 @@
 <?php
+/*
+
+ORM Entity
+
+En ORM entity is declared by extending this class and declaring a MAP
+in the static variable $map:
+
+e.g.:
+
+myModule/libraries/Book/Entity.php:
+
+<?php
+
+namespace Book;
+
+class Entity extends \Phidias\ORM\Entity
+{
+    var $id;
+    var $title;
+    .... declare all attributes
+
+
+    //MAP definition:
+
+    protected static $map = array(
+
+        'db'    => 'DB_NAME'            //the name of the database (as configured via phidias.db.DB_NAME.property).
+        'table' => '.....',             //the name of the table
+        'keys'  => array('id' [, ...]), //array identifying one or more columns as keys
+
+        'attributes' => array(
+
+            'id' => array(
+                'type'          => 'integer',
+                'unsigned'      => TRUE,
+                'autoIncrement' => TRUE
+            ),
+
+            'title' => array(
+                'type'          => 'varchar',
+                'length'        => 128,
+                'acceptNull'    => TRUE,
+                'default'       => NULL
+            ),
+
+            
+
+            .... possible declarations:
+
+
+            'attributeName' => array(
+                'column'        => '',                  //corresponding column in the database.  Defaults to attribute name
+                'length'        => 1,                   //column type length. Defaults to DB Engine default
+                'autoIncrement' => FALSE,               //use an AUTO_INCREMENT key.  Defaults to FALSE
+                'unsigned'      => TRUE,                //use UNSIGNED for numeric field.  Defaults to DB Engine default (FALSE)
+                'acceptNull'    => TRUE,                //Defines if the column can be null.  Defaults to DB Engine default (FALSE)
+                'default'       => NULL                 //Default value.  Defaults to DB Engine default (NONE)
+            ),
+
+
+            //Declare a foreign key to another entity 
+
+            'relationName' => array(
+                'column'        => '',                  //corresponding column in the database.  Default to attribute name
+                'entity'        => 'Author\Entity',     //full class name of the related entity
+                'attribute'     => 'id',                //related attribute (usually the related entity's primary key)
+                'acceptNull'    => TRUE,
+                'default'       => NULL                
+            )
+
+        ),
+
+
+        //Declare column indexes (ADD INDEX):
+
+        'indexes' => array(
+            'lastname1' => 'lastname1',
+            'lastname2' => 'lastname2',
+            'username'  => 'username'
+        ),
+
+
+        //Declare unique indexes (ADD UNIQUE):
+
+        'unique' => array(
+            array('person', 'token')
+            .... [attribute name, or array of attribute names] ...
+        )
+    );
+
+
+}
+
+
+
+
+*/
+
+
 namespace Phidias\ORM;
 
 use Phidias\DB\Iterator;

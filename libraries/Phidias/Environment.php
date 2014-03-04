@@ -185,7 +185,7 @@ class Environment
         /* Straight correspondance to modules */
         if ($filename = self::findFile(self::DIR_LIBRARIES."/$classBaseName.php")) {
             Debug::startBlock("autoloading '$class' from '$filename'", 'include');
-            include $filename;
+            include_once $filename;
             Debug::endBlock();
             return;
         }
@@ -198,8 +198,11 @@ class Environment
     {
         for ($c = count(self::$modules)-1; $c >= 0; $c--) {
             $currentModule = self::$modules[$c];
-            if (is_file("$currentModule/$filename")) {
-                return "$currentModule/$filename";
+
+            $targetFile = "$currentModule/$filename";
+
+            if (is_file($targetFile)) {
+                return $targetFile;
             }
         }
 
@@ -306,7 +309,7 @@ class Environment
                 preg_match("/namespace ([a-zA-Z0-9_\\\\]+)/", $contents, $matches);
 
                 if (isset($matches[1])) {
-                    $foundClassname = $matches[1].'\\'.$foundClassname;
+                    $foundClassname = "\\" . $matches[1].'\\'.$foundClassname;
                 }
 
                 $retval[] = $foundClassname;

@@ -1,8 +1,12 @@
 <?php
-use Phidias\Resource\Controller;
-use Phidias\Environment;
 
-class Phidias_Orm_Controller extends Controller
+namespace Phidias\DB;
+
+use Phidias\Environment;
+use Phidias\DB;
+use Phidias\Component\Configuration;
+
+class Controller extends \Phidias\Resource\Controller
 {
     private static function getEntities($prefix = NULL)
     {
@@ -23,7 +27,9 @@ class Phidias_Orm_Controller extends Controller
     {
         foreach ($classnames as $classname) {
 
-            if (strpos($classname, 'Phidias_ORM') === 0) {
+            $classname = trim($classname, "\\");
+
+            if (strpos($classname, 'Phidia\ORM') === 0) {
                 continue;
             }
 
@@ -33,16 +39,13 @@ class Phidias_Orm_Controller extends Controller
 
             $checking[$classname] = true;
 
-            if (!is_subclass_of($classname, "\Phidias\ORM\Entity")) {
+            if (!class_exists($classname) || !is_subclass_of($classname, "\Phidias\ORM\Entity")) {
                 continue;
             }
 
             $object = new $classname;
             $map    = $object->getMap();
             $db     = $map->getDB();
-            if ($db !== NULL) {
-                continue;
-            }
 
             $relations = array();
             foreach ($map->getRelations() as $relationData) {
@@ -58,11 +61,43 @@ class Phidias_Orm_Controller extends Controller
         return $organized;
     }
 
+    private static function createDatabase($identifier)
+    {
+        $credentials = Configuration::getAll("phidias.db.$identifier.");
+
+        if (!$credentials || !isset($credentials['database'])) {
+            return FALSE;
+        }
+
+
+        $databaseName = $credentials['database'];
+
+        $db = DB::connect(array(
+            'host'     => isset($credentials['host']) ? $credentials['host'] : null,
+            'username' => isset($credentials['username']) ? $credentials['username'] : null,
+            'password' => isset($credentials['password']) ? $credentials['password'] : null,
+            'charset'  => isset($credentials['charset']) ? $credentials['charset'] : null,
+        ));
+
+        $db->query("CREATE DATABASE IF NOT EXISTS `$databaseName` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci");
+
+        return TRUE;
+    }
+
     public function getCreate()
     {
         $entities = self::getEntities($this->attributes->get('prefix'));
 
+        $databases = array();
+
         foreach ($entities as $entity) {
+
+            $databaseName = $entity->getMap()->getDB();
+            if (!isset($databases[$databaseName])) {
+                $databases[$databaseName] = self::createDatabase($databaseName);
+            }
+
+
             $entity::table()->create();
         }
 
