@@ -16,7 +16,7 @@ class Authentication extends Persistent implements AuthenticationInterface
     {
         $persistentObject = self::singleton();
 
-        return isset($persistentObject->$credentials[$credentialName]) ? $persistentObject->$credentials[$credentialName] : NULL;
+        return isset($persistentObject->credentials[$credentialName]) ? $persistentObject->credentials[$credentialName] : NULL;
     }
 
     public static function getCredentials()
