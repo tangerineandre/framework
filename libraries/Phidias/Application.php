@@ -36,6 +36,7 @@ class Application
         /* Handle CORS preflight requests */
         if ($requestMethod == 'options') {
             HTTP\Response::header("Access-Control-Allow-Origin", "*");
+            HTTP\Response::header("Access-Control-Allow-Credentials", "true");
             HTTP\Response::header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
 
             return;

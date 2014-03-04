@@ -606,7 +606,7 @@ class Collection
         $iterator   = $this->iterator == NULL ? $this->buildIterator() : $this->iterator;
         $iterator->setResultSet($resultSet);
 
-        if ($primaryKeyValue) {
+        if ($primaryKeyValue !== NULL) {
             $iterator = $iterator->first();
             if ($iterator === NULL) {
                 throw new Exception\EntityNotFound(array(
