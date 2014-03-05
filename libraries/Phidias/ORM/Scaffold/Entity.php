@@ -5,14 +5,12 @@ use Phidias\Filesystem;
 
 class Entity
 {
-    private $classname;
     private $db;
     private $table;
     private $attributes;
 
-    public function __construct($classname)
+    public function __construct()
     {
-        $this->classname    = $classname;
         $this->attributes   = array();
     }
 
@@ -37,12 +35,13 @@ class Entity
         }
     }
 
-    public function save($classname, $filename)
+    public function save($namespace, $classname, $filename)
     {
         $keyAttributes = array();
 
         $output = "<?php\n\n";
-        $output .= "class $classname extends Phidias\ORM\Entity \n";
+        $output .= "namespace $namespace;\n\n";
+        $output .= "class $classname extends \Phidias\ORM\Entity \n";
         $output .= "{\n";
 
         foreach ($this->attributes as $attributeName => $attributeData) {

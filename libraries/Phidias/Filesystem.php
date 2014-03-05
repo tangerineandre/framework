@@ -123,12 +123,12 @@ class Filesystem
 
     public static function mktree($dir, $perms = 0777)
     {
-        return $this->createDirectory($dir, $perms);
+        return self::createDirectory($dir, $perms);
     }
 
     public static function rmdir($dir)
     {
-        return $this->deleteDirectory($dir);
+        return self::deleteDirectory($dir);
     }
 
     public static function putContents($filename, $data, $flags = 0)

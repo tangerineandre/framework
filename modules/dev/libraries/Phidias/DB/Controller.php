@@ -25,13 +25,10 @@ class Controller extends \Phidias\Resource\Controller
 
     private static function priorizeEntities($classnames, &$organized = array(), &$checking = array())
     {
+       
         foreach ($classnames as $classname) {
 
             $classname = trim($classname, "\\");
-
-            if (strpos($classname, 'Phidia\ORM') === 0) {
-                continue;
-            }
 
             if (isset($checking[$classname])) {
                 continue;
@@ -39,7 +36,16 @@ class Controller extends \Phidias\Resource\Controller
 
             $checking[$classname] = true;
 
-            if (!class_exists($classname) || !is_subclass_of($classname, "\Phidias\ORM\Entity")) {
+            //!!!
+            if (strpos($classname, "V3") !== false) {
+                continue;
+            }
+
+            if (!class_exists($classname)) {
+                continue;
+            }
+
+            if (!is_subclass_of($classname, "\Phidias\ORM\Entity")) {
                 continue;
             }
 
@@ -97,7 +103,7 @@ class Controller extends \Phidias\Resource\Controller
 
     public function getCreate()
     {
-        $entities = self::getEntities($this->attributes->get('prefix'));
+        $entities  = self::getEntities($this->attributes->get('prefix'));
 
         $databases = array();
 
