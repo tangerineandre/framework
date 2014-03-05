@@ -106,7 +106,9 @@ class Iterator implements \Iterator
         $className      = $this->className;
         $returnObject   = new $className($id, FALSE);
 
-        $returnObject->useAttributes(array_keys($this->attributes));
+        if (is_callable(array($returnObject, 'useAttributes'))) {
+            $returnObject->useAttributes(array_keys($this->attributes));
+        }
 
         foreach ($this->attributes as $attributeName => $sourceField) {
             $returnObject->$attributeName = isset($this->currentRow[$sourceField]) ? $this->currentRow[$sourceField] : NULL;
