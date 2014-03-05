@@ -431,8 +431,8 @@ class DB
             $columnNull         = isset($columnData['acceptNull']) && $columnData['acceptNull'] ? 'NULL' : 'NOT NULL';
 
             if (array_key_exists('default', $columnData)) {
-                $defaultValue = is_null($columnData['default']) ? 'NULL' : $columnData['default'];
-                $columnDefault  = "DEFAULT $defaultValue";
+                $defaultValue  = is_null($columnData['default']) ? 'NULL' : "'".$columnData['default']."'";
+                $columnDefault = "DEFAULT $defaultValue";
             } else {
                 $columnDefault  = NULL;
             }
