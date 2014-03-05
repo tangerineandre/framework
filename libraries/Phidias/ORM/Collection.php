@@ -93,6 +93,8 @@ class Collection
                 $join['collection']->setAlias("$alias.$joinName", TRUE);
             }
         }
+
+        return $this;
     }
 
     public function addPreFilter($filter)
