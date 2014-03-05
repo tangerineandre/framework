@@ -63,20 +63,31 @@ class Controller extends \Phidias\Resource\Controller
 
     private static function createDatabase($identifier)
     {
-        $credentials = Configuration::getAll("phidias.db.$identifier.");
+        if ($identifier === 'default') {
+
+            $credentials = array(
+                'host'     => Configuration::get("phidias.db.host"),
+                'username' => Configuration::get("phidias.db.username"),
+                'password' => Configuration::get("phidias.db.password"),
+                'database' => Configuration::get("phidias.db.database"),                
+                'charset'  => Configuration::get("phidias.db.charset")
+            );
+
+        } else {
+            $credentials = Configuration::getAll("phidias.db.$identifier.");
+        }
 
         if (!$credentials || !isset($credentials['database'])) {
             return FALSE;
         }
 
-
         $databaseName = $credentials['database'];
 
         $db = DB::connect(array(
-            'host'     => isset($credentials['host']) ? $credentials['host'] : null,
-            'username' => isset($credentials['username']) ? $credentials['username'] : null,
-            'password' => isset($credentials['password']) ? $credentials['password'] : null,
-            'charset'  => isset($credentials['charset']) ? $credentials['charset'] : null,
+            'host'     => isset($credentials['host'])       ? $credentials['host']      : null,
+            'username' => isset($credentials['username'])   ? $credentials['username']  : null,
+            'password' => isset($credentials['password'])   ? $credentials['password']  : null,
+            'charset'  => isset($credentials['charset'])    ? $credentials['charset']   : null,
         ));
 
         $db->query("CREATE DATABASE IF NOT EXISTS `$databaseName` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci");
@@ -93,6 +104,11 @@ class Controller extends \Phidias\Resource\Controller
         foreach ($entities as $entity) {
 
             $databaseName = $entity->getMap()->getDB();
+
+            if (!$databaseName) {
+                $databaseName = 'default';
+            }
+
             if (!isset($databases[$databaseName])) {
                 $databases[$databaseName] = self::createDatabase($databaseName);
             }
