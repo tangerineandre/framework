@@ -30,7 +30,7 @@ class Environment
         $realPath = realpath($modulePath);
 
         if (!$realPath) {
-            trigger_error("module '$modulePath' not found");
+            trigger_error("module '$modulePath' not found", E_USER_ERROR);
         } else {
             self::$modules[]                    = $realPath;
             self::$modulePublicURLs[$realPath]  = $publicURL;

@@ -33,16 +33,6 @@ class Application
     */
     public static function run($requestMethod, $requestResource = NULL, $attributes = NULL)
     {
-        /* Handle CORS preflight requests */
-        if ($requestMethod == 'options') {
-            HTTP\Response::header("Access-Control-Allow-Origin", "*");
-            HTTP\Response::header("Access-Control-Allow-Credentials", "true");
-            HTTP\Response::header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-
-            return;
-        }
-
-
         /* Increase depth */
         self::$depth++;
 
