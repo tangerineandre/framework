@@ -93,6 +93,10 @@ class Request
     /* As suggested in http://stackoverflow.com/questions/1049401/how-to-select-content-type-from-http-accept-header-in-php */
     public static function getBestSupportedMimeType($mimeTypes = null)
     {
+        if (!isset($_SERVER['HTTP_ACCEPT'])) {
+            return array('text/plain' => 1);
+        }
+
         // Values will be stored in this array
         $AcceptTypes = Array ();
 

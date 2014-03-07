@@ -13,4 +13,8 @@ return array(
     'phidias.view.json.folder'        => 'views/json', //folder relative to the root of the module
     'phidias.view.json.extension'     => 'json', //folder relative to the root of the module
 
+    'phidias.view.txt.mimetypes'     => array('text/plain'),
+    'phidias.view.txt.folder'        => 'views/txt',
+    'phidias.view.txt.extension'     => 'txt',
+
 );

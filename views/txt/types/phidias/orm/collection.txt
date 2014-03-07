@@ -1,0 +1,13 @@
+<?php
+
+$attributes = $model->getAttributes();
+$elements   = $model->find();
+
+foreach ($elements as $element) {
+
+	foreach ($attributes as $attribute) {
+		echo "$attribute: {$element->$attribute}\n";
+	}
+	echo "\n\n";
+
+}

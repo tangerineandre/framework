@@ -1,0 +1,6 @@
+
+ERROR: <?=$exception->getMessage()?>
+<?= print_r($exception->getData(), 1) ?>
+
+ <?=get_class($exception)?>
+

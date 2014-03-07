@@ -42,6 +42,13 @@ class Environment
         self::$mainPublicURL = $url;
     }
 
+    private static function usage()
+    {
+        echo "Usage: \n";
+        echo "index.php [method] [resource]\n\n\n";
+        exit;
+    }
+
     public static function start()
     {
         if (isset($_GET['__debug'])) {
@@ -52,11 +59,32 @@ class Environment
 
         try {
 
-            $resource       = HTTP\Request::GET('_a');
-            $requestMethod  = HTTP\Request::method();
-            $attributes     = HTTP\Request::GET();
-            unset($attributes['_a']);
+            //CLI
+            if (php_sapi_name() == 'cli') {
 
+                $arguments = $_SERVER['argv'];
+
+                if (count($arguments) < 3) {
+                    self::usage();
+                }
+
+                $requestMethod = strtolower(trim($arguments[1]));
+                $resource      = $arguments[2];
+                
+                $attributes    = array();
+                if (isset($arguments[3])) {
+                    parse_str($arguments[3], $attributes);
+                }
+
+            } else {
+
+                $resource       = HTTP\Request::GET('_a');
+                $requestMethod  = HTTP\Request::method();
+                $attributes     = HTTP\Request::GET();
+                unset($attributes['_a']);
+
+            }
+    
             echo Application::run($requestMethod, $resource, $attributes);
 
         } catch (\Exception $e) {
@@ -75,7 +103,7 @@ class Environment
 
 
         /* Determine the main public URL */
-        if (self::$mainPublicURL === NULL) {
+        if (self::$mainPublicURL === NULL && isset($_SERVER['HTTP_HOST'])) {
             self::$mainPublicURL = "http" . (isset($_SERVER["HTTPS"]) ? "s://" : "://") . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']);
         }
 

@@ -1,0 +1,2 @@
+Arreglo:
+<?php dump($model); ?>
