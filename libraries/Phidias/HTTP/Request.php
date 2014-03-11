@@ -116,7 +116,7 @@ class Request
             // WARNING: $q == 0 means, that mime-type isn’t supported!
             $AcceptTypes[$a] = $q;
         }
-        arsort($AcceptTypes);
+        //arsort($AcceptTypes);
 
         // if no parameter was passed, just return parsed data
         if (!$mimeTypes) return $AcceptTypes;
