@@ -185,7 +185,7 @@ class DB
     /* Helper functions */
     public function sanitizeValue($value)
     {
-        if (is_numeric($value)) {
+        if (is_numeric($value) && strpos(strtolower($value), 'e') === false) { //PHP will say "937e3019763158166689073439699767" IS numeric (!!!)
             return $value;
         } else if (is_string($value)) {
             return "'".$this->escapeString($value)."'";
