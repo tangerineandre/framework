@@ -1,6 +1,8 @@
 <?php
 namespace Phidias;
 
+use \Phidias\HTTP\Request;
+
 use \Phidias\Component\Configuration;
 use \Phidias\Component\Language;
 use \Phidias\Component\View;
@@ -41,11 +43,14 @@ class Application
             return;
         }
 
+        //Sanitize method
+        $requestMethod = Request::sanitizeMethod($requestMethod);
+
         //Sanitize resource
-        if ($requestResource === NULL) {
+        $requestResource = trim($requestResource, ' /');
+        if (empty($requestResource)) {
             $requestResource = Configuration::get('phidias.application.defaults.resource');
         }
-        $requestResource = rtrim($requestResource, '/');
 
         //Sanitize attributes
         if (!is_array($attributes)) {
