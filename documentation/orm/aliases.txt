@@ -1,0 +1,56 @@
+El uso de aliases se complica cuando se consideran namespaces.
+
+Por ejemplo:
+
+use Phidias\Core\Person\Entity as Person;
+use Phidias\Core\Person\Nationality\Entity as Nationality;
+
+$foo = Person::collection()
+		->attr('nationalities', Nationality::collection())
+		->attrs('firstName', 'lastName')
+		->where("firstName LIKE :foo AND nationalities.code != :shoo")
+
+
+$books = Book::collection()
+			->attr('title')
+			->attr('author', Person::single())
+			->attr('comments', Comment::collection()
+				->attr('author', Person::single())
+			)
+
+			->where('author.name LIKE :query', array('query' => 'a%'))
+
+			->orderBy('comments.author.lastName')
+
+			->find();
+
+
+foreach ($books as $book) {
+	
+	echo $book->title;
+	echo $book->author->name;
+
+	foreach ($book->comments as $comment) {
+		echo $comment->text;
+		echo $comment->author->name;
+	}
+
+}
+
+
+.... los aliases se pueden chocar!!
+
+$foo = Person::collection()
+		->attr('casa')
+		->attr('casaOTRA')
+
+		->where('casa = FOO and casaOTRA = foo')
+
+al hacer la traduccion con el diccionario:
+
+casa => '`tabla`.`casa`'
+casaOTRA => '`tabla`.`casaOTRA`'
+
+la cadena puede resultar
+
+'casa = FOO and casaOTRA = foo' ---->   '`tabla`.`casa` = FOO and `tabla`.`casa`OTRA = foo'

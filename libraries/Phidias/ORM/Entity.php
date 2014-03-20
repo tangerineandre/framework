@@ -250,14 +250,10 @@ class Entity
         return new Iterator(get_called_class(), $key, $singleElement);
     }
 
-    public static function collection($alias = NULL)
+    public static function collection()
     {
         $className = get_called_class();
         $retval    = new Collection(new $className);
-
-        if ($alias !== NULL) {
-            $retval->setAlias($alias);
-        }
 
         if (is_callable(array($className, 'preFilter'))) {
             $retval->addPreFilter(array($className, 'preFilter'));
@@ -270,14 +266,10 @@ class Entity
         return $retval;
     }
 
-    public static function single($alias = NULL)
+    public static function single()
     {
         $className = get_called_class();
         $retval    = new Collection(new $className, TRUE);
-
-        if ($alias !== NULL) {
-            $retval->setAlias($alias);
-        }
 
         if (is_callable(array($className, 'preFilter'))) {
             $retval->addPreFilter(array($className, 'preFilter'));

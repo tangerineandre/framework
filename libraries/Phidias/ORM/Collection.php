@@ -38,8 +38,8 @@ class Collection
 
     public function __construct($entity, $hasOneElement = FALSE)
     {
-        $this->alias             = $this->generateAlias($entity);
-        
+        $this->alias             = NULL;
+
         $this->entity            = $entity;
         $this->hasOneElement     = $hasOneElement;
 
@@ -66,21 +66,6 @@ class Collection
         
         $this->joinAsInner       = FALSE;
         $this->relationAlias     = NULL;
-    }
-
-
-    private function generateAlias($entity)
-    {
-        $class = get_class($entity);
-        $parts = explode("\\", $class);
-
-        $count = count($parts);
-
-        if ($count >=2 && $parts[$count-1] === 'Entity') {
-            return $parts[$count-2];
-        }
-
-        return $class;
     }
 
 
@@ -181,7 +166,9 @@ class Collection
             if (!isset($keyValue[$index])) {
                 continue;
             }
-            $this->where("$this->alias.$attributeName = :v", array('v' => $keyValue[$index]));
+
+            $attribute = $this->alias === NULL ? $attributeName : "$this->alias.$attributeName";
+            $this->where("$attribute = :v", array('v' => $keyValue[$index]));
         }
     }
 
@@ -204,8 +191,9 @@ class Collection
         $validAttributes = $this->map->getAttributes();
 
         if (isset($validAttributes[$attribute])) {
-            $sortString = $descending ? 'DESC' : 'ASC';
-            $this->order("$this->alias.$attribute $sortString");
+            $sortString    = $descending ? 'DESC' : 'ASC';
+            $fullAttribute = $this->alias === NULL ? $attribute : "$this->alias.$attribute";
+            $this->order("$fullAttribute $sortString");
         } else {
             trigger_error("orderBy attribute '$attribute' not found", E_USER_WARNING);
         }
@@ -376,10 +364,12 @@ class Collection
                     continue;
                 }
 
+                $fullAttribute = $this->alias === NULL ? $attributeName : "$this->alias.$attributeName";
+
                 if (Operator::isOperator($value)) {
-                    $this->match("$this->alias.$attributeName", Operator::getValue($value), Operator::getOperator($value));
+                    $this->match($fullAttribute, Operator::getValue($value), Operator::getOperator($value));
                 } else {
-                    $this->match("$this->alias.$attributeName", $value);
+                    $this->match($fullAttribute, $value);
                 }
 
             }
@@ -397,7 +387,7 @@ class Collection
 
     public function join($name, $localColumn, $foreignColumn, $collection, $type = 'inner')
     {
-        $collection->setAlias("$this->alias.$name", TRUE);
+        $collection->setAlias($this->alias === NULL ? $name : "$this->alias.$name", TRUE);
 
         $this->joins[$name] = array(
             'type'          => $type,
@@ -478,22 +468,23 @@ class Collection
 
     private function buildAliasMap()
     {
-        $retval = array();
+        $tableAlias = $this->alias === NULL ? $this->map->getTable() : $this->alias;
+        $retval     = array();
 
         $mapAttributes = $this->map->getAttributes();
         foreach ($mapAttributes as $attributeName => $attributeData) {
-            $retval["$this->alias.$attributeName"] = '`'.$this->alias.'`.`'.$attributeData['column'].'`';
+            $word          = $this->alias === NULL ? $attributeName : "$this->alias.$attributeName";
+            $retval[$word] = '`'.$tableAlias.'`.`'.$attributeData['column'].'`';
         }
 
         foreach ($this->joins as $name => $join) {
             $retval = array_merge($retval, $join['collection']->buildAliasMap());
         }
 
-
         /* Derived attributes */
         foreach ($this->workingAttributes as $attributeName => $attributeSource) {
             if (!isset($mapAttributes[$attributeName]) && $attributeSource != "NULL") {
-                $retval["$this->alias.$attributeName"] = '('.$this->translate($attributeSource, $retval).')';
+                $retval[$this->alias === NULL ? $attributeName : "$this->alias.$attributeName"] = '('.$this->translate($attributeSource, $retval).')';
             }
         }
 
@@ -502,7 +493,14 @@ class Collection
 
     private function translate($string, $aliasMap)
     {
-        return strtr($string, $aliasMap);
+        $patterns     = [];
+        $replacements = [];
+        foreach ($aliasMap as $source => $target) {
+            $patterns[]     = "/([^a-zA-Z0-9_.`]|\A){$source}([^a-zA-Z0-9_.`]|\z)/";
+            $replacements[] = "\$1{$target}\$2";
+        }
+
+        return preg_replace($patterns, $replacements, $string);
     }
 
     public function getSelect($aliasMap = NULL)
@@ -511,18 +509,19 @@ class Collection
             $aliasMap = $this->buildAliasMap();
         }
 
-        $select = new \Phidias\DB\Select($this->map->getTable(), $this->alias);
+        $aliasPrefix = $this->alias === NULL ? "" : $this->alias.".";
+        $select      = new \Phidias\DB\Select($this->map->getTable(), $this->alias);
 
         /* Always select keys */
         foreach ($this->map->getKeys() as $keyAttributeName) {
-            $select->field($this->alias.'.'.$keyAttributeName, $this->translate($this->alias.'.'.$keyAttributeName, $aliasMap));
+            $select->field($aliasPrefix.$keyAttributeName, $this->translate($aliasPrefix.$keyAttributeName, $aliasMap));
         }
 
         foreach ($this->workingAttributes as $name => $origin) {
             if ($origin == NULL) {
-                $origin = $this->alias.'.'.$name;
+                $origin = $aliasPrefix.$name;
             }
-            $select->field($this->alias.'.'.$name, $this->translate($origin, $aliasMap));
+            $select->field($aliasPrefix.$name, $this->translate($origin, $aliasMap));
         }
 
         foreach ($this->where as $condition) {
@@ -546,15 +545,19 @@ class Collection
         }
 
         foreach ($this->joins as $name => $join) {
-            $conditions = array("`$this->alias`.`{$join['localColumn']}` = `$this->alias.$name`.`{$join['foreignColumn']}`");
+
+            $localAlias  = $select->getAlias();
+            $remoteAlias = $join['collection']->alias;
+            
+            $conditions  = array("`$localAlias`.`{$join['localColumn']}` = `$remoteAlias`.`{$join['foreignColumn']}`");
 
             foreach ($join['collection']->where as $condition) {
                 $conditions[] = $this->translate($condition, $aliasMap);
             }
 
-            $nestedCollection = clone($join['collection']);
+            $nestedCollection        = clone($join['collection']);
             $nestedCollection->where = array();
-            $nestedSelect = $nestedCollection->getSelect($aliasMap);
+            $nestedSelect            = $nestedCollection->getSelect($aliasMap);
 
             $select->join($join['type'], $nestedSelect, $conditions);
         }
@@ -574,13 +577,13 @@ class Collection
     {
         $key = array();
         foreach ($this->map->getKeys() as $attributeName) {
-            $key[] = "$this->alias.$attributeName";
+            $key[] = $this->alias === NULL ? $attributeName : "$this->alias.$attributeName";
         }
 
         $iterator = new \Phidias\DB\Iterator(get_class($this->entity), $key, $this->hasOneElement);
 
         foreach (array_keys($this->workingAttributes) as $attributeName) {
-            $iterator->attr($attributeName, "$this->alias.$attributeName");
+            $iterator->attr($attributeName, $this->alias === NULL ? $attributeName : "$this->alias.$attributeName");
         }
 
         foreach ($this->joins as $attributeName => $joinData) {
@@ -814,20 +817,21 @@ class Collection
         }
 
 
-        $table = $this->map->getTable().' `'.$this->alias.'`';
+        $tableName  = $this->map->getTable();
+        $tableAlias = $this->alias === NULL ? $tableName : $this->alias;
+        $table      = $tableName.' `'.$tableAlias.'`';
 
         foreach ($this->joins as $name => $join) {
-
-            $joinConditions = array("`$this->alias`.`{$join['localColumn']}` = `$this->alias.$name`.`{$join['foreignColumn']}`");
-            foreach ($join['collection']->where as $condition) {
-                $joinConditions[] = $this->translate($condition, $aliasMap);
-            }
 
             $joinTable = $join['collection']->map->getTable();
             $joinAlias = $join['collection']->alias;
 
-            $table .= " JOIN $joinTable `$joinAlias` ON ".implode(" AND ", $joinConditions);
+            $joinConditions = array("`$tableAlias`.`{$join['localColumn']}` = `$joinAlias`.`{$join['foreignColumn']}`");
+            foreach ($join['collection']->where as $condition) {
+                $joinConditions[] = $this->translate($condition, $aliasMap);
+            }
 
+            $table .= " JOIN $joinTable `$joinAlias` ON ".implode(" AND ", $joinConditions);
         }
 
         return $this->db->update($table, $this->updateValues, $updateCondition);

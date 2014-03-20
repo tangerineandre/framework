@@ -140,6 +140,11 @@ class Select
         return $this;
     }
 
+    public function getAlias()
+    {
+        return $this->alias;
+    }
+
 
     private function flatten()
     {
