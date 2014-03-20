@@ -250,8 +250,12 @@ class DB
 
     public function count(DB\Select $select)
     {
-        $resultSet  = $this->query($select->toSQL(TRUE));
-        $retval     = $resultSet->fetch_assoc();
+        $countSelect = clone($select);
+        $countSelect->limit(NULL);
+
+        $selectQuery = $countSelect->toSQL();
+        $resultSet   = $this->query("SELECT COUNT(*) as `count` FROM ($selectQuery) countTable");
+        $retval      = $resultSet->fetch_assoc();
 
         return isset($retval['count']) ? (int)$retval['count'] : NULL;
     }

@@ -493,8 +493,8 @@ class Collection
 
     private function translate($string, $aliasMap)
     {
-        $patterns     = [];
-        $replacements = [];
+        $patterns     = array();
+        $replacements = array();
         foreach ($aliasMap as $source => $target) {
             $patterns[]     = "/([^a-zA-Z0-9_.`]|\A){$source}([^a-zA-Z0-9_.`]|\z)/";
             $replacements[] = "\$1{$target}\$2";

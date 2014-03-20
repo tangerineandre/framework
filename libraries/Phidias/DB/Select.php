@@ -167,26 +167,16 @@ class Select
     }
 
 
-    public function toSQL($count = FALSE)
+    public function toSQL()
     {
         $this->flatten();
 
-        if ($count) {
-            if ($this->groupBy) {
-                $countField = "DISTINCT({$this->groupBy[0]})";
-            } else {
-                $countField = '*';
-            }
-
-            $sqlQuery = "SELECT COUNT($countField) as count "."\n";
-        } else {
-            $sqlQuery = "SELECT "."\n";
-            $allColumns = array();
-            foreach ($this->fields as $columnAlias => $columnSource) {
-                $allColumns[] = $columnSource.' as `'.$columnAlias.'`';
-            }
-            $sqlQuery .= implode(', '."\n", $allColumns)." \n";
+        $sqlQuery = "SELECT "."\n";
+        $allColumns = array();
+        foreach ($this->fields as $columnAlias => $columnSource) {
+            $allColumns[] = $columnSource.' as `'.$columnAlias.'`';
         }
+        $sqlQuery .= implode(', '."\n", $allColumns)." \n";
 
         $sqlQuery .= "FROM "."\n";
         $sqlQuery .= $this->table.' `'.$this->alias."`\n";
@@ -203,7 +193,7 @@ class Select
             $sqlQuery .= 'WHERE ('.implode(') AND (', $this->conditions).") \n";
         }
 
-        if ($this->groupBy && !$count) {
+        if ($this->groupBy) {
             $sqlQuery .= "GROUP BY ".implode(', ', $this->groupBy)." \n";
         }
 
@@ -211,7 +201,7 @@ class Select
             $sqlQuery .= "HAVING $this->having"." \n";
         }
 
-        if ($this->orderBy && !$count) {
+        if ($this->orderBy) {
             $orderBy = array();
             foreach ($this->orderBy as $fieldName) {
                 $orderBy[] = isset($this->fields[$fieldName]) ? $this->fields[$fieldName] : $fieldName;
@@ -220,7 +210,7 @@ class Select
             $sqlQuery .= "ORDER BY ".implode(', ', $orderBy)." \n";
         }
         
-        if ($this->limit !== NULL && !$count) {
+        if ($this->limit !== NULL) {
             $sqlQuery .= "LIMIT $this->limit"." \n";
         }
 
