@@ -87,6 +87,7 @@ class Storage
 	{
 		$candidates = array();
 		$orderGuide = array();
+		$orderScore = 0;
 
 		foreach ($this->table as $id => $record) {
 			$matchScore = $this->getMatchScore($record['attributes'], $queryAttributes);
@@ -96,7 +97,7 @@ class Storage
 			}
 
 			$candidates[$id] = $record['payload'];
-			$orderGuide[$id] = $matchScore;
+			$orderGuide[$id] = $matchScore * 10000  +  ($orderScore++);
 		}
 
 		$sortedCandidates = array();

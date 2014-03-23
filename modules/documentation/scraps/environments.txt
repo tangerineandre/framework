@@ -1,0 +1,24 @@
+Un ENTORNO es la agrupación de uno o varios modulos para ser ejecutados
+en un servidor.
+
+Un ENTORNO es, basicamente, una carpeta pública en donde se incluye un
+archivo index.php que carga, configura y ejecuta un modulo de Phidias Framework.
+
+Ejemplo:
+/var/www/myapp.co/public/index.php:
+
+<?php
+include '/var/www/lib/framework2/loader.php';           //Incluir el loader del framework
+
+use Phidias\Environment;                           //Usar la clase "Environment" de PHidias
+
+Environment::URL('http://phidias4.localhost');          //Especificar la URL del entorno
+
+Environment::module('../../framework2/modules/dev');    //Incluir los modulos adicionales a ejecutar
+Environment::module('../modules/dev');
+
+Environment::start();                                   //Ejecutar la aplicación
+
+
+El ENTORNO define la URL bajo la cual esta corriendo la aplicacion, los (opcionalmente) modulos adicionales
+a incluir para este entorno

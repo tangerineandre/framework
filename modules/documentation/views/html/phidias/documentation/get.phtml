@@ -1,0 +1,72 @@
+<h1>Documentaci&oacute;n</h1>
+
+<ol>
+    <li>
+        <span>Introducci&oacute;n</span>      
+        <ol>
+            <li><span>Hello world!</span></li>
+        </ol>
+    </li>
+
+    <li>
+        <span>Componentes principales</span>        
+        <ol>
+            <li><span>Controladores</span></li>
+            <li><span>Modelo</span></li>
+            <li><span>Vistas</span></li>
+        </ol>
+    </li>
+
+    <li>
+        <span>Enrutamiento</span>        
+        <ol>
+            <li><span>Asociar un controlador a un request</span></li>
+            <li><span>Asociar una vista a un request</span></li>
+        </ol>
+    </li>
+
+    <li>
+        <span>ORM</span>        
+        <ol>
+            <li><span>Introducci&oacute;n</span></li>
+            <li><span>Entidades</span></li>
+            <li><span>Colecciones</span></li>
+        </ol>
+    </li>
+
+</ol>
+
+<article>
+    <h1>Introducci&oacute;n</h1>
+
+    <p><span class="framework">Phidias Framework</span> es un framework PHP de alto nivel para el desarrollo de <a href="http://en.wikipedia.org/wiki/Representational_state_transfer">REST APIs</a></p>
+
+
+    <section>
+        <h2>Hello world!</h2>
+
+        <p>archivo: module\libraries\Sample\Controller.php</p>
+
+        <pre><code class="language-php">
+&lt;?php
+namespace Sample;
+
+class Controller extends \Phidias\Resource\Controller {
+
+    public function get()
+    {
+        echo "Hello world!";
+    }
+
+}
+        </code></pre>
+
+
+        <p>Al invocar http://PUBLIC URL/sample vemos:</p>
+
+        <pre>Hello world!</pre>  
+
+
+    </section>
+
+</article>

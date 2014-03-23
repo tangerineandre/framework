@@ -5,6 +5,17 @@ use Phidias\Component\ExceptionHandler;
 use Phidias\Component\Configuration;
 use Phidias\Component\Language;
 
+/**
+  * Phidias Environment
+  *
+  * This class lets you describe an environment.  That is,
+  * * include modules
+  * * declare components
+  * * run the application
+  *
+  * @author  Santiago Cortes <santiago.cortes@phidias.com.co>
+  *
+  */
 class Environment
 {
     private static $modules          = array();
@@ -20,11 +31,28 @@ class Environment
     private static $mainPublicURL    = NULL;
     private static $modulePublicURLs = array();
 
+
+    /**
+      * Declare a component
+      *
+      * @author  Santiago Cortes <santiago.cortes@phidias.com.co>
+      *
+      */
     public static function component($componentName, $componentClass)
     {
         self::$components[$componentName] = $componentClass;
     }
 
+
+    /**
+      * Include a module
+      *
+      * @param string $modulePath Root folder of the included module
+      * @param string $publicURL optional URL in which the module's public directory is published
+      *
+      * @return int Returns the number of elements.      
+      *
+      */
     public static function module($modulePath, $publicURL = NULL)
     {
         $realPath = realpath($modulePath);
@@ -37,18 +65,21 @@ class Environment
         }
     }
 
+    /**
+      * Include a module
+      *
+      * @param string $url The URL where this module's public folder is available
+      *
+      */
     public static function URL($url)
     {
         self::$mainPublicURL = $url;
     }
 
-    private static function usage()
-    {
-        echo "Usage: \n";
-        echo "index.php [method] [resource]\n\n\n";
-        exit;
-    }
-
+    /**
+      * Execute the application
+      *
+      */
     public static function start()
     {
         if (isset($_GET['__debug'])) {
@@ -92,6 +123,13 @@ class Environment
         }
 
         self::finalize();
+    }
+
+    private static function usage()
+    {
+        echo "Usage: \n";
+        echo "index.php [method] [resource]\n\n\n";
+        exit;
     }
 
     private static function initialize()

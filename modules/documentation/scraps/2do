@@ -1,0 +1,61 @@
+[X] define environment via environment.php
+    [X] consolidate public directories under a single URL
+    [X] dictionary translations should affect according to current context (in which the controller, view or layour is being rendered)
+
+[X] Handle exceptions at depth > 1 and in resources invoked from layout
+
+[X] Better debugger
+    [X] recursive blocks without the need to specify timer name (simply nest blocks)
+        [X] collapsable in UI
+
+    [X] built-in jQUERY
+
+[X] request methods
+
+[X] application init/fin
+     Implemented as Loader component ... but reevaluated because all inits in the environment tree should be executed
+
+     This doesn't leave me many options.  If I do it via a class, then said class must have a different name
+     for each environment in the tree.
+
+     So, finally, implemented as files.  application/control/initialize.php and application/control/finalize.php
+
+
+
+[X] exception handler (with environment specific exceptions, response codes)
+    [X] response object (code, headers, content-disposition, etc)
+    Implemented via ExceptionHandler component
+
+[X] languages
+
+[X] Make a "public" directory, as to avoid direct access to application and component files
+
+[X] Layouts
+      As component
+      Application::setLayout('X');
+      Layout::set('varable', 'value')
+
+      Define block contents from views:
+        <? Layout::block('blockName') ?>
+        <link>asdasds</link>
+        <? Layout::endBlock('blockName') ?>
+     (syntax from http://www.recessframework.org/page/new-layouts-blocks-assertive-templates-system is interesting )
+
+      Within the layout:
+        $this (the current layout) as variable
+        Output a specific block contents  <?= $this->output('blockName') ?>
+        Output a layout variable <?= $this->var ?>  OR <?= $this->get('var') ?>
+        Parse asset paths (URLs)  <?= $this->URL('img/hello.jpg') ?>
+
+
+[X] models/ORM
+
+[/] navigation (linkTo, redirectTo, URL, etc)
+
+[ ] authentication
+
+[ ] authorization
+
+[ ] output filters (doc, excel, pdf, etc)
+
+[X] Comprehensive DB exceptions (i.e. exceptions per MySQL errors)
