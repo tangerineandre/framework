@@ -109,10 +109,10 @@ class Environment
 
             } else {
 
-                $resource       = HTTP\Request::GET('_a');
+                $resource       = HTTP\Request::GET('_url');
                 $requestMethod  = HTTP\Request::method();
                 $attributes     = HTTP\Request::GET();
-                unset($attributes['_a']);
+                unset($attributes['_url']);
 
             }
     
@@ -330,9 +330,9 @@ class Environment
     }
 
     /* Determines the URL corresponding to the specified module's public directory */
-    public static function getPublicURL($module)
+    public static function getPublicURL($module = NULL)
     {
-        return isset(self::$modulePublicURLs[$module]) ? self::$modulePublicURLs[$module] : self::$mainPublicURL;
+        return $module !== NULL && isset(self::$modulePublicURLs[$module]) ? self::$modulePublicURLs[$module] : self::$mainPublicURL;
     }
 
     /* Finds all files postfixed with $classname */
