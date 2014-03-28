@@ -12,8 +12,9 @@ returning the rendered view
 namespace Phidias;
 
 use Phidias\Resource\Route;
+use Phidias\Resource\Response;
 
-use Phidias\Component\Configuration;
+use Phidias\Component\Authorization;
 use Phidias\Component\Language;
 
 class Resource
@@ -22,20 +23,12 @@ class Resource
 	private $attributes;
     private $acceptedContentTypes;
 
-    private $contentType;
-
-
-	public function __construct($URI, $attributes = NULL, $acceptedContentTypes = array())
+	public function __construct($URI)
 	{
-        $this->setURI($URI);
-        $this->setAttributes($attributes);
-        $this->accept($acceptedContentTypes);
+        $this->URI                  = self::sanitizeURI($URI);
+        $this->attributes           = array();
+        $this->acceptedContentTypes = array();
 	}
-
-    public function setURI($URI)
-    {
-        $this->URI = rtrim($URI,'/');
-    }
 
     public function setAttributes($attributes)
     {
@@ -49,10 +42,52 @@ class Resource
 
 
 
-	/* Perform the given request method on the resource */
-	public function run($requestMethod)
-	{
-        $controllers = Route::getControllers($requestMethod, $this->URI);
+
+    /* Valid methods */
+    public static function getValidMethods()
+    {
+        return array('options', 'get', 'head', 'post', 'put', 'delete', 'trace', 'connect');
+    }
+
+    /* Sanitize the given input method */
+    public static function sanitizeMethod($method)
+    {
+        $method = strtolower(trim($method));
+        if (!in_array($method, self::getValidMethods())) {
+            return NULL;
+        }
+
+        return $method;
+    }
+
+    public static function sanitizeURI($URI)
+    {
+        //Sanitize resource
+        $URI = trim($URI, ' /');
+        if (empty($URI)) {
+            $URI = Configuration::get('phidias.resource.default');
+        }        
+
+        return $URI;
+    }
+
+
+
+    public function execute($method, $data = NULL)
+    {
+        $method = self::sanitizeMethod($method);
+
+        /* Authorize request */
+        Debug::startBlock("authorizing '{$this->URI}'");
+        if (!Authorization::authorized($method, $this->URI)) {
+            throw new Resource\Exception\Unauthorized(array('resource' => $this->URI, 'method' => $method));
+        }
+        Debug::endBlock();
+
+
+        
+        /* Authorized.  Execute controller and set response */
+        $controllers = Route::getControllers($method, $this->URI);
 
         if (!count($controllers)) {
             throw new Resource\Exception\NotFound(array('resource' => $this->URI));
@@ -67,13 +102,12 @@ class Resource
         }
 
         if ($validController === NULL) {
-            throw new Resource\Exception\MethodNotImplemented(array('resource' => $this->URI, 'method' => $requestMethod));
+            throw new Resource\Exception\MethodNotImplemented(array('resource' => $this->URI, 'method' => $method));
         }
 
         $controllerClass        = $validController[0];
         $controllerMethod       = $validController[1];
         $controllerArguments    = (isset($validController[2]) && is_array($validController[2])) ? $validController[2] : array();
-
 
         /* validate number of arguments */
         $controllerReflection  = new \ReflectionMethod($controllerClass, $controllerMethod);
@@ -85,58 +119,98 @@ class Resource
 
 
         /* Ready to go! Run controller */
+        $response = new Resource\Response;
+
+        $controllerObject = new $controllerClass($response);
+        $controllerObject->setAttributes($this->attributes);
+        $controllerObject->setData($data);
+
         Debug::startBlock("running controller $controllerClass->$controllerMethod()", 'resource');
         $languagePreviousContext = Language::getCurrentContext();
         Language::useContext(Environment::findModule($controllerReflection->getFileName()));
 
         ob_start();
-        $controllerObject = new $controllerClass($this->attributes);
-        $model            = call_user_func_array(array($controllerObject, $controllerMethod), $controllerArguments);
-        $stdOut           = ob_get_contents();
+        $response->model = call_user_func_array(array($controllerObject, $controllerMethod), $controllerArguments);
+        $stdOut          = ob_get_contents();
         ob_end_clean();
 
         Language::useContext($languagePreviousContext);
         Debug::endBlock();
 
         /* Produced output instead of model */
-        if (!empty($stdOut) && $model === NULL) {
-            return $stdOut;
+        if ($response->model === NULL && !empty($stdOut)) {
+            $response->model = $stdOut;
         }
 
-        /* Look for the template */
-        $modelType = gettype($model);
+        /* render model in template*/
+        $modelType = gettype($response->model);
         if ($modelType === 'object') {
-            $modelType = get_class($model);
+            $modelType = get_class($response->model);
         }
 
-        $templates = Route::getTemplates($requestMethod, $this->URI, $validController, $modelType);
-
-        /* Use template "model" as last resort */
+        $templates   = Route::getTemplates($method, $this->URI, $validController, $modelType);
         $templates[] = "model";
-
 
         $view = new View;
         $view->templates($templates);
         $view->acceptTypes($this->acceptedContentTypes);
 
-        $view->set('model', $model);
+        $view->set('model', $response->model);
 
         if ($viewOutput = $view->render()) {
-            $this->contentType = $view->getContentType();
-            return $viewOutput;
+            $response->content     = $viewOutput;
+            $response->contentType = $view->getContentType();
+        } else {
+            $response->content     = print_r($model, true);
+            $response->contentType = 'text/plain';
         }
 
-        Debug::add("no templates found.  Returning stdOut");
-        return $stdOut;
-	}
-
-
-    /* Get the content type used to render the latest invocation */
-    public function getContentType()
-    {
-        return $this->contentType;
+        return $response;
     }
 
+
+
+
+
+    public function options($data = null)
+    {
+        return $this->execute('options', $data);
+    }
+
+    public function get($data = null)
+    {
+        return $this->execute('get', $data);
+    }
+
+    public function head($data = null)
+    {
+        return $this->execute('head', $data);
+    }
+
+    public function post($data = null)
+    {
+        return $this->execute('post', $data);
+    }
+
+    public function put($data = null)
+    {
+        return $this->execute('put', $data);
+    }
+
+    public function delete($data = null)
+    {
+        return $this->execute('delete', $data);
+    }
+
+    public function trace($data = null)
+    {
+        return $this->execute('trace', $data);
+    }
+
+    public function connect($data = null)
+    {
+        return $this->execute('connect', $data);
+    }
 
 
 }

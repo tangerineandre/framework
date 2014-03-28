@@ -90,6 +90,11 @@ class Environment
 
         try {
 
+            $resourceURI        = null;
+            $resourceAttributes = array();
+            $requestData        = null;
+            $requestMethod      = 'get';
+
             //CLI
             if (php_sapi_name() == 'cli') {
 
@@ -99,24 +104,33 @@ class Environment
                     self::usage();
                 }
 
-                $requestMethod = strtolower(trim($arguments[1]));
-                $resource      = $arguments[2];
-                
-                $attributes    = array();
+                $resourceURI        = $arguments[2];
+                $requestMethod      = strtolower(trim($arguments[1]));
+                $resourceAttributes = array();
                 if (isset($arguments[3])) {
-                    parse_str($arguments[3], $attributes);
+                    parse_str($arguments[3], $resourceAttributes);
                 }
 
             } else {
 
-                $resource       = HTTP\Request::GET('_url');
-                $requestMethod  = HTTP\Request::method();
-                $attributes     = HTTP\Request::GET();
-                unset($attributes['_url']);
-
+                $resourceURI        = HTTP\Request::GET('_url');
+                $resourceAttributes = HTTP\Request::GET();
+                $requestMethod      = HTTP\Request::method();
+                $requestData        = HTTP\Request::data();
+                unset($resourceAttributes['_url']);
             }
-    
-            echo Application::run($requestMethod, $resource, $attributes);
+
+            /* execute the resource */
+            $resource = new Resource($resourceURI);
+            $resource->setAttributes($resourceAttributes);
+            $resource->accept(HTTP\Request::getBestSupportedMimeType());
+
+            $response = $resource->execute($requestMethod, $requestData);
+
+            HTTP\Response::code($response->code, $response->message);
+            HTTP\Response::contentType($response->contentType);
+
+            echo $response->content;
 
         } catch (\Exception $e) {
             echo ExceptionHandler::handle($e);

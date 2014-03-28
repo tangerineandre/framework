@@ -115,6 +115,17 @@ Route::forRequest('*')->useTemplate(function($requestMethod, $requestResource, $
 });
 
 
+Route::forRequest('*')->useTemplate(function($requestMethod, $requestResource, $controller, $modelType) {
+
+    if ($parentClass = get_parent_class($modelType)) {
+        $parts = explode('\\', trim(strtolower($parentClass)));
+        return 'types/'.implode('/', $parts);
+    }
+
+});
+
+
+
 
 /*
 Determine template from controller

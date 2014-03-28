@@ -266,10 +266,14 @@ class Entity
         return $retval;
     }
 
-    public static function single()
+    public static function single($primaryKeyValue = NULL)
     {
         $className = get_called_class();
         $retval    = new Collection(new $className, TRUE);
+
+        if ($primaryKeyValue !== NULL) {
+            $retval->whereKey($primaryKeyValue);
+        }
 
         if (is_callable(array($className, 'preFilter'))) {
             $retval->addPreFilter(array($className, 'preFilter'));

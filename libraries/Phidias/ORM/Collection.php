@@ -599,10 +599,6 @@ class Collection
 
     public function find($primaryKeyValue = NULL)
     {
-        if ($this->hasOneElement) {
-            $this->limit(1);
-        }
-
         if ($primaryKeyValue !== NULL) {
             $this->whereKey($primaryKeyValue);
         }

@@ -1,5 +1,5 @@
 <?php
-namespace Phidias\Application\Exception;
+namespace Phidias\Resource\Exception;
 
 class Unauthorized extends \Phidias\Exception
 {

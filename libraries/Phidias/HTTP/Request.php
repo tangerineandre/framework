@@ -72,24 +72,6 @@ class Request
         return $method !== NULL ? strtolower($method) : 'get';
     }
 
-    /* Valid methods */
-    public static function getValidMethods()
-    {
-        return array('options', 'get', 'head', 'post', 'put', 'delete', 'trace', 'connect');
-    }
-
-    /* Sanitize the given input method */
-    public static function sanitizeMethod($requestMethod)
-    {
-        //Sanitize Request method
-        $requestMethod = strtolower(trim($requestMethod));
-        if (!in_array($requestMethod, self::getValidMethods())) {
-            return NULL;
-        }
-
-        return $requestMethod;
-    }
-
     /* As suggested in http://stackoverflow.com/questions/1049401/how-to-select-content-type-from-http-accept-header-in-php */
     public static function getBestSupportedMimeType($mimeTypes = null)
     {

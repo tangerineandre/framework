@@ -1,0 +1,14 @@
+//Route::forRequest("GET people/:personID")->useController('myFooController', 'get', array(':personID'));
+
+class myFooController extends \Phidias\Resource\Controller
+{
+	
+	public function post($personID)
+	{
+		$limit = $this->attributes->get('limit');
+		$name  = $this->data->get('name');
+
+		$allData = $this->data->getAll();
+
+	}	
+}
