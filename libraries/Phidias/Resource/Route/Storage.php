@@ -64,11 +64,12 @@ class Storage
 		}
 	}
 
-	public function store($payload, $attributeValues)
+	public function store($payload, $attributeValues, $priority = 0)
 	{
 		$record               = array();
 		$record['payload']    = $payload;
 		$record['attributes'] = array();
+		$record['priority']   = $priority;
 		
 		$recordKey            = uniqid();
 
@@ -90,6 +91,7 @@ class Storage
 		$orderScore = 0;
 
 		foreach ($this->table as $id => $record) {
+
 			$matchScore = $this->getMatchScore($record['attributes'], $queryAttributes);
 
 			if ($matchScore === 0) {
@@ -97,7 +99,7 @@ class Storage
 			}
 
 			$candidates[$id] = $record['payload'];
-			$orderGuide[$id] = $matchScore * 10000  +  ($orderScore++);
+			$orderGuide[$id] = $matchScore*10000  + ((100 - $record['priority'])*100) + ($orderScore++);
 		}
 
 		$sortedCandidates = array();

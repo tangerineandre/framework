@@ -219,8 +219,8 @@ class Entity
         $retval = clone($this);
 
         foreach (get_object_vars($retval) as $attributeName => $value ) {
-            if ($value instanceof \Phidias\DB\Iterator) {
-                $retval->$attributeName = $retval->$attributeName->fetchAll();
+            if (is_a($value, '\Phidias\DB\Iterator') || is_a($value, '\Phidias\ORM\Entity')) {
+                $retval->$attributeName = $value->fetchAll();
             }
         }
 

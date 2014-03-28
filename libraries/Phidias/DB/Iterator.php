@@ -249,7 +249,7 @@ class Iterator implements \Iterator
         $retval = array();
         foreach ($this as $object) {
             foreach ($nested as $attributeName) {
-                if (is_a($object->$attributeName, 'Iterator')) {
+                if (is_a($object->$attributeName, 'Iterator') || is_a($object->$attributeName, '\Phidias\ORM\Entity')) {
                     $object->$attributeName = $object->$attributeName->fetchAll();
                 }
             }

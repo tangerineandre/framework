@@ -69,14 +69,14 @@ class Route
     }
 
 
-    public static function registerController($controller, $requestMethod = NULL, $resourcePattern = NULL)
+    public static function registerController($controller, $requestMethod = NULL, $resourcePattern = NULL, $priority = 0)
     {
         self::initialize();
 
         self::$controllerStorage->store($controller, array(
             'requestMethod'   => $requestMethod,
             'resourcePattern' => $resourcePattern
-        ));
+        ), $priority);
     }
 
     public static function getControllers($requestMethod = NULL, $requestResource = NULL)
@@ -101,10 +101,10 @@ class Route
                     continue;
                 }
                 $matches[$recordId] = $builtController;
-                $controlerString = $matches[$recordId][0].'->'.$matches[$recordId][1].'() * generated from route function';
+                $controllerString = $matches[$recordId][0].'->'.$matches[$recordId][1].'() * generated from route function';
 
             } else {
-                $controlerString = $matches[$recordId][0].'->'.$matches[$recordId][1].'()';
+                $controllerString = $matches[$recordId][0].'->'.$matches[$recordId][1].'()';
             }
 
 
@@ -138,7 +138,7 @@ class Route
                 $argumentValue = str_replace($wildcardKeys, $wildcardValues, $argumentValue);
             }
 
-            Debug::add("possible controller '$controlerString'");
+            Debug::add("possible controller '$controllerString'");
         }
 
         Debug::endBlock();
@@ -350,9 +350,9 @@ class Route
 
 
 
-    public function useController($controller)
+    public function useController($controller, $priority = 0)
     {
-        self::registerController($controller, $this->requestMethod, $this->resourcePattern);
+        self::registerController($controller, $this->requestMethod, $this->resourcePattern, $priority);
 
         return $this;
     }

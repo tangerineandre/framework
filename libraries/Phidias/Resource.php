@@ -85,62 +85,74 @@ class Resource
         Debug::endBlock();
 
 
-        
-        /* Authorized.  Execute controller and set response */
+        /* Authorization OK.  Initialize response */
+        $response = new Resource\Response;
+
+
+        /* Find and execute all related controllers */
         $controllers = Route::getControllers($method, $this->URI);
 
         if (!count($controllers)) {
             throw new Resource\Exception\NotFound(array('resource' => $this->URI));
         }
 
-        $validController = NULL;
+
+        $validControllers = array();
         foreach ($controllers as $possibleController) {
-            if (is_callable(array($possibleController[0], $possibleController[1]))) {
-                $validController = $possibleController;
-                break;
+
+            $controllerClass        = $possibleController[0];
+            $controllerMethod       = $possibleController[1];
+            $controllerArguments    = (isset($possibleController[2]) && is_array($possibleController[2])) ? $possibleController[2] : array();
+
+            if (is_callable(array($controllerClass, $controllerMethod))) {
+
+                /* Controller is callable.  Now check number of arguments */
+                $controllerReflection  = new \ReflectionMethod($controllerClass, $controllerMethod);
+                $requiredArgumentCount = $controllerReflection->getNumberOfRequiredParameters();
+                if (count($controllerArguments) < $requiredArgumentCount) {
+                    continue;
+                }
+
+                $validControllers[] = $possibleController;
             }
         }
 
-        if ($validController === NULL) {
+        /* No valid controllers found */
+        if (!count($validControllers)) {
             throw new Resource\Exception\MethodNotImplemented(array('resource' => $this->URI, 'method' => $method));
         }
 
-        $controllerClass        = $validController[0];
-        $controllerMethod       = $validController[1];
-        $controllerArguments    = (isset($validController[2]) && is_array($validController[2])) ? $validController[2] : array();
+        $stdOut = '';
 
-        /* validate number of arguments */
-        $controllerReflection  = new \ReflectionMethod($controllerClass, $controllerMethod);
-        $requiredArgumentCount = $controllerReflection->getNumberOfRequiredParameters();
+        foreach ($validControllers as $validController) {
 
-        if (count($controllerArguments) < $requiredArgumentCount) {
-            throw new Resource\Exception\WrongArgumentCount(array('expected' => $requiredArgumentCount));
+            $controllerClass        = $validController[0];
+            $controllerMethod       = $validController[1];
+            $controllerArguments    = (isset($validController[2]) && is_array($validController[2])) ? $validController[2] : array();
+
+            $controllerObject = new $controllerClass($response);
+            $controllerObject->setAttributes($this->attributes);
+            $controllerObject->setData($data);
+
+            Debug::startBlock("running controller $controllerClass->$controllerMethod()", 'resource');
+            $languagePreviousContext = Language::getCurrentContext();
+            Language::useContext(Environment::findModule($controllerReflection->getFileName()));
+
+            ob_start();
+            $response->model = call_user_func_array(array($controllerObject, $controllerMethod), $controllerArguments);
+            $stdOut          .= ob_get_contents();
+            ob_end_clean();
+
+            Language::useContext($languagePreviousContext);
+            Debug::endBlock();
+
         }
-
-
-        /* Ready to go! Run controller */
-        $response = new Resource\Response;
-
-        $controllerObject = new $controllerClass($response);
-        $controllerObject->setAttributes($this->attributes);
-        $controllerObject->setData($data);
-
-        Debug::startBlock("running controller $controllerClass->$controllerMethod()", 'resource');
-        $languagePreviousContext = Language::getCurrentContext();
-        Language::useContext(Environment::findModule($controllerReflection->getFileName()));
-
-        ob_start();
-        $response->model = call_user_func_array(array($controllerObject, $controllerMethod), $controllerArguments);
-        $stdOut          = ob_get_contents();
-        ob_end_clean();
-
-        Language::useContext($languagePreviousContext);
-        Debug::endBlock();
 
         /* Produced output instead of model */
         if ($response->model === NULL && !empty($stdOut)) {
             $response->model = $stdOut;
         }
+
 
         /* render model in template*/
         $modelType = gettype($response->model);
