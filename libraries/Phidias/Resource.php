@@ -109,11 +109,9 @@ class Resource
             throw new Resource\Exception\MethodNotImplemented(array('resource' => $this->URI, 'method' => $method));
         }
 
-
         $request  = new Resource\Request($method, $data, $headers);
         $response = new Resource\Response;
-
-        $stdOut = '';
+        $stdOut   = '';
 
         foreach ($validControllers as $validController) {
 
