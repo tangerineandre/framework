@@ -107,7 +107,7 @@ Phidias\ORM\Collection      types/phidias/orm/collection
 ... see the pattern ?
 
 */
-Route::forRequest('*')->useTemplate(function($requestMethod, $requestResource, $controller, $modelType) {
+Route::forRequest('*')->useTemplate(function($requestMethod, $requestResource, $modelType) {
 
     $parts = explode('\\', trim(strtolower($modelType)));
     return 'types/'.implode('/', $parts);
@@ -115,7 +115,7 @@ Route::forRequest('*')->useTemplate(function($requestMethod, $requestResource, $
 });
 
 
-Route::forRequest('*')->useTemplate(function($requestMethod, $requestResource, $controller, $modelType) {
+Route::forRequest('*')->useTemplate(function($requestMethod, $requestResource, $modelType) {
 
     if ($parentClass = get_parent_class($modelType)) {
         $parts = explode('\\', trim(strtolower($parentClass)));
@@ -123,29 +123,3 @@ Route::forRequest('*')->useTemplate(function($requestMethod, $requestResource, $
     }
 
 });
-
-
-
-
-/*
-Determine template from controller
-
-i.e.
-
-type                                        template
----------------------------------------------------
-Person\Foo\Controller->get()                person/foo/get
-Person\Foo\Controller->getShoo()            person/foo/getshoo
-
-
-*/
-Route::forRequest('*')->useTemplate(function($requestMethod, $requestResource, $controller, $modelType) {
-
-    $baseParts = explode('\\', strtolower(str_replace('\Controller', '', $controller[0])));
-    $template  = implode('/', $baseParts).'/'.strtolower($controller[1]);
-
-    return $template;
-
-});
-
-

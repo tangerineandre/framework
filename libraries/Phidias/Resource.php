@@ -1,6 +1,6 @@
 <?php
 /*
-Resource Controller
+Resource
 
 Given a resource URI and its attributes (as an array), this class
 is responsible for
@@ -23,24 +23,16 @@ class Resource
 	private $attributes;
     private $acceptedContentTypes;
 
-	public function __construct($URI)
+	public function __construct($URI, $attributes = array())
 	{
-        $this->URI                  = self::sanitizeURI($URI);
-        $this->attributes           = array();
-        $this->acceptedContentTypes = array();
+        $this->URI        = self::sanitizeURI($URI);
+        $this->attributes = (array)$attributes;
 	}
 
-    public function setAttributes($attributes)
+    public function accept($acceptedContentTypes)
     {
-        $this->attributes = (array)$attributes;
+        $this->acceptedContentTypes = $acceptedContentTypes;
     }
-
-    public function accept($contentTypes)
-    {
-        $this->acceptedContentTypes = (array)$contentTypes;
-    }
-
-
 
 
     /* Valid methods */
@@ -73,7 +65,7 @@ class Resource
 
 
 
-    public function execute($method, $data = NULL)
+    public function execute($method, $data = NULL, $headers = NULL)
     {
         $method = self::sanitizeMethod($method);
 
@@ -83,11 +75,6 @@ class Resource
             throw new Resource\Exception\Unauthorized(array('resource' => $this->URI, 'method' => $method));
         }
         Debug::endBlock();
-
-
-        /* Authorization OK.  Initialize response */
-        $response = new Resource\Response;
-
 
         /* Find and execute all related controllers */
         $controllers = Route::getControllers($method, $this->URI);
@@ -109,7 +96,7 @@ class Resource
                 /* Controller is callable.  Now check number of arguments */
                 $controllerReflection  = new \ReflectionMethod($controllerClass, $controllerMethod);
                 $requiredArgumentCount = $controllerReflection->getNumberOfRequiredParameters();
-                if (count($controllerArguments) < $requiredArgumentCount) {
+                if (count($controllerArguments) + 1 < $requiredArgumentCount) { //+ 1 because the input is appended to the controller arguments (see below)
                     continue;
                 }
 
@@ -122,6 +109,10 @@ class Resource
             throw new Resource\Exception\MethodNotImplemented(array('resource' => $this->URI, 'method' => $method));
         }
 
+
+        $request  = new Resource\Request($method, $data, $headers);
+        $response = new Resource\Response;
+
         $stdOut = '';
 
         foreach ($validControllers as $validController) {
@@ -129,58 +120,69 @@ class Resource
             $controllerClass        = $validController[0];
             $controllerMethod       = $validController[1];
             $controllerArguments    = (isset($validController[2]) && is_array($validController[2])) ? $validController[2] : array();
+            $controllerArguments[]  = $data;
 
-            $controllerObject = new $controllerClass($response);
+            $allMatchedArguments    = (isset($validController[3]) && is_array($validController[3])) ? $validController[3] : array();
+
+
+            $controllerObject = new $controllerClass();
             $controllerObject->setAttributes($this->attributes);
-            $controllerObject->setData($data);
+            $controllerObject->setArguments($allMatchedArguments);
+            $controllerObject->setRequest($request);
+            $controllerObject->setResponse($response);
+
 
             Debug::startBlock("running controller $controllerClass->$controllerMethod()", 'resource');
             $languagePreviousContext = Language::getCurrentContext();
             Language::useContext(Environment::findModule($controllerReflection->getFileName()));
 
             ob_start();
-            $response->model = call_user_func_array(array($controllerObject, $controllerMethod), $controllerArguments);
-            $stdOut          .= ob_get_contents();
+            $model  = call_user_func_array(array($controllerObject, $controllerMethod), $controllerArguments);
+            $stdOut .= ob_get_contents();
             ob_end_clean();
 
             Language::useContext($languagePreviousContext);
             Debug::endBlock();
 
+            if ($model !== NULL) {
+                $response->data = $model;
+            }
+
         }
 
         /* Produced output instead of model */
-        if ($response->model === NULL && !empty($stdOut)) {
-            $response->model = $stdOut;
+        if ($response->data === NULL && !empty($stdOut)) {
+            $response->data = $stdOut;
         }
 
+        if ($this->acceptedContentTypes !== NULL) {
 
-        /* render model in template*/
-        $modelType = gettype($response->model);
-        if ($modelType === 'object') {
-            $modelType = get_class($response->model);
+            /* render model in template */
+            $modelType = gettype($response->data);
+            if ($modelType === 'object') {
+                $modelType = get_class($response->data);
+            }
+
+            $templates   = Route::getTemplates($method, $this->URI, $modelType);
+            $templates[] = "model";
+
+            $view = new View;
+            $view->templates($templates);
+            $view->acceptTypes($this->acceptedContentTypes);
+            $view->set('model', $response->data);
+
+            if ($viewOutput = $view->render()) {
+                $response->contentType = $view->getContentType();
+                $response->body        = $viewOutput;
+            } else {
+                $response->contentType = 'text/plain';
+                $response->body        = print_r($response->data, true);
+            }
+
         }
 
-        $templates   = Route::getTemplates($method, $this->URI, $validController, $modelType);
-        $templates[] = "model";
-
-        $view = new View;
-        $view->templates($templates);
-        $view->acceptTypes($this->acceptedContentTypes);
-
-        $view->set('model', $response->model);
-
-        if ($viewOutput = $view->render()) {
-            $response->content     = $viewOutput;
-            $response->contentType = $view->getContentType();
-        } else {
-            $response->content     = print_r($model, true);
-            $response->contentType = 'text/plain';
-        }
-
-        return $response;
+        return $response;  
     }
-
-
 
 
 

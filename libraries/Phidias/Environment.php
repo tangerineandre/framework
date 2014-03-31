@@ -118,19 +118,21 @@ class Environment
                 $requestMethod      = HTTP\Request::method();
                 $requestData        = HTTP\Request::data();
                 unset($resourceAttributes['_url']);
+
             }
 
+
             /* execute the resource */
-            $resource = new Resource($resourceURI);
-            $resource->setAttributes($resourceAttributes);
+            $resource = new Resource($resourceURI, $resourceAttributes);
             $resource->accept(HTTP\Request::getBestSupportedMimeType());
 
             $response = $resource->execute($requestMethod, $requestData);
 
             HTTP\Response::code($response->code, $response->message);
             HTTP\Response::contentType($response->contentType);
+            HTTP\Response::headers($response->headers->all());
 
-            echo $response->content;
+            echo $response->body;
 
         } catch (\Exception $e) {
             echo ExceptionHandler::handle($e);

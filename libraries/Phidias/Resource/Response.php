@@ -2,22 +2,26 @@
 
 namespace Phidias\Resource;
 
+use Phidias\HashTable;
+
 class Response
 {
-	public $model;
-
 	public $code;
 	public $message;
-	public $content;
+	public $headers;
 	public $contentType;
+	public $body;
+
+	public $data; //body rendered as a PHP variable
 
 	public function __construct()
 	{
-		$this->model       = null;
-
 		$this->code        = 200;
 		$this->message     = 'OK';
-		$this->content     = null;
+		$this->headers     = new HashTable;
 		$this->contentType = null;
+		$this->body        = null;
+		
+		$this->data        = null;
 	}
 }

@@ -124,7 +124,8 @@ class Route
                 $matchedArguments = self::getMatchingArguments($recordAttributes['resourcePattern'], $requestResource);
 
                 if ($matchedArguments !== NULL) {
-                    $wildcardValues = array_merge($wildcardValues, $matchedArguments);
+                    $matches[$recordId][3] = $matchedArguments;
+                    $wildcardValues        = array_merge($wildcardValues, $matchedArguments);
                 }
             }
 
@@ -147,20 +148,19 @@ class Route
     }
 
 
-    public static function registerTemplate($template, $requestMethod = NULL, $resourcePattern = NULL, $controller = NULL, $modelType = NULL)
+    public static function registerTemplate($template, $requestMethod = NULL, $resourcePattern = NULL, $modelType = NULL)
     {
         self::initialize();
 
         self::$templateStorage->store($template, array(
             'requestMethod'   => $requestMethod,
             'resourcePattern' => $resourcePattern,
-            'controller'      => $controller,
             'modelType'       => $modelType
         ));
     }
 
 
-    public static function getTemplates($requestMethod = NULL, $requestResource = NULL, $controller = NULL, $modelType = NULL)
+    public static function getTemplates($requestMethod = NULL, $requestResource = NULL, $modelType = NULL)
     {
         self::initialize();
 
@@ -169,14 +169,13 @@ class Route
         $matches = self::$templateStorage->retrieve(array(
             'requestMethod'   => $requestMethod,
             'resourcePattern' => $requestResource,
-            'controller'      => $controller,
             'modelType'       => $modelType
         ));
 
         foreach ($matches as $key => $matchingTemplate) {
 
             if (is_callable($matchingTemplate)) {
-                $builtTemplate = call_user_func_array($matchingTemplate, array($requestMethod, $requestResource, $controller, $modelType));
+                $builtTemplate = call_user_func_array($matchingTemplate, array($requestMethod, $requestResource, $modelType));
                 if (!$builtTemplate) {
                     unset($matches[$key]);
                     continue;
@@ -359,7 +358,7 @@ class Route
 
     public function useTemplate($template)
     {
-        self::registerTemplate($template, $this->requestMethod, $this->resourcePattern, $this->controller, $this->modelType);
+        self::registerTemplate($template, $this->requestMethod, $this->resourcePattern, $this->modelType);
 
         return $this;
     }

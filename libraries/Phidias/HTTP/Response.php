@@ -13,6 +13,13 @@ class Response
         header($headerName.': '.$headerValue);
     }
 
+    public static function headers(array $headers)
+    {
+        foreach ($headers as $headerName => $headerValue) {
+            $this->header($headerName, $headerValue);
+        }
+    }
+
     public static function contentType($contentType)
     {
         if ($contentType !== NULL) {

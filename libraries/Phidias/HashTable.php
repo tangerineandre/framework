@@ -19,9 +19,21 @@ class HashTable
 		return isset($this->variables[$variableName]) ? $this->variables[$variableName] : $defaultValue;
 	}
 
-	public function getAll()
+	public function except($variableName)
+	{
+		$retval = clone($this->variables);
+		unset($retval[$variableName]);
+		return $retval;
+	}
+
+	public function all()
 	{
 		return $this->variables;
+	}
+
+	public function has($variableName)
+	{
+		return isset($this->variables[$variableName]);
 	}
 
 	public function required($variableName)
