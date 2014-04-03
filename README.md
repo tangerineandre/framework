@@ -10,7 +10,7 @@
 
 Checkout the repository into [path to framework]/
 ```
-git checkout https://github.com/phidiasdev/framework.git
+git clone https://github.com/phidiasdev/framework.git
 ```
 
 
