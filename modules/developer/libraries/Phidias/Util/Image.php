@@ -1,6 +1,6 @@
 <?php
 
-namespace Phidias;
+namespace Phidias\Util;
 
 class Image
 {
